@@ -1,0 +1,328 @@
+name: Scheduled Quality Checks
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  PYTHON_VERSION: '3.9'
+  NODE_VERSION: '18'
+  MIN_COVERAGE_BACKEND: '85'
+  MIN_COVERAGE_WEB: '80'
+
+jobs:
+  code-quality-analysis:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      
+      - name: Install Python dependencies
+        run: pip install -r src/backend/requirements.txt -r src/backend/requirements-dev.txt
+      
+      - name: Run pylint
+        run: pylint --output-format=text src/backend > pylint-report.txt || true
+      
+      - name: Run mypy
+        run: mypy src/backend > mypy-report.txt || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      
+      - name: Install Node.js dependencies
+        run: cd src/web && npm ci
+      
+      - name: Run ESLint
+        run: cd src/web && npm run lint:report
+      
+      - name: Upload code quality reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-quality-reports
+          path: '*-report.txt'
+      
+      - name: Check for critical issues
+        run: python -c "import re; pylint = open('pylint-report.txt').read(); mypy = open('mypy-report.txt').read(); critical_pylint = len(re.findall(r'E\d{4}', pylint)); critical_mypy = len(re.findall(r'error:', mypy)); print(f'Critical Pylint issues: {critical_pylint}'); print(f'Critical Mypy issues: {critical_mypy}'); exit(0 if critical_pylint < 10 and critical_mypy < 10 else 1)" || echo 'Critical issues found but continuing workflow'
+
+  test-coverage-analysis:
+    name: Test Coverage Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      
+      - name: Install Python dependencies
+        run: pip install -r src/backend/requirements.txt -r src/backend/requirements-dev.txt
+      
+      - name: Run backend tests with coverage
+        run: pytest src/test/unit/backend --cov=src/backend --cov-report=xml --cov-report=html
+      
+      - name: Generate coverage report
+        run: python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); coverage = float(root.attrib['line-rate']) * 100; print(f'Backend Coverage: {coverage:.2f}%'); with open('coverage-report.txt', 'w') as f: f.write(f'Backend Coverage: {coverage:.2f}%\n'); f.write(f'Coverage threshold: {env.MIN_COVERAGE_BACKEND}%\n'); f.write(f'Status: {\'PASS\' if coverage >= float('${{ env.MIN_COVERAGE_BACKEND }}') else \'FAIL\'}\n')" || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      
+      - name: Install Node.js dependencies
+        run: cd src/web && npm ci
+      
+      - name: Run web tests with coverage
+        run: cd src/web && npm run test:coverage
+      
+      - name: Append web coverage to report
+        run: cd src/web && npx istanbul-merge --out ../web-coverage.json coverage/coverage-final.json && cd .. && python -c "import json; data = json.load(open('web-coverage.json')); total_lines = sum(file['lines']['total'] for file in data['files'].values()); covered_lines = sum(file['lines']['covered'] for file in data['files'].values()); coverage = (covered_lines / total_lines * 100) if total_lines > 0 else 0; print(f'Web Coverage: {coverage:.2f}%'); with open('coverage-report.txt', 'a') as f: f.write(f'\nWeb Coverage: {coverage:.2f}%\n'); f.write(f'Coverage threshold: {env.MIN_COVERAGE_WEB}%\n'); f.write(f'Status: {\'PASS\' if coverage >= float('${{ env.MIN_COVERAGE_WEB }}') else \'FAIL\'}\n')" || true
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: ['coverage-report.txt', 'htmlcov/', 'src/web/coverage/']
+      
+      - name: Create issue if coverage decreases
+        if: ${{ failure() }}
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: Test Coverage Below Threshold
+          content-filepath: coverage-report.txt
+          labels: test-coverage, priority-high
+
+  security-scanning:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python, javascript
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install security tools
+        run: pip install bandit safety
+      
+      - name: Run Bandit security scan
+        run: bandit -r src/backend -x src/backend/tests -f json -o bandit-results.json || true
+      
+      - name: Check dependencies with Safety
+        run: safety check -r src/backend/requirements.txt --json > safety-results.json || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Run npm audit
+        run: cd src/web && npm audit --json > npm-audit-results.json || true
+      
+      - name: Generate security report
+        run: python -c "import json; import os; bandit = json.load(open('bandit-results.json')) if os.path.exists('bandit-results.json') else {'results': []}; safety = json.load(open('safety-results.json')) if os.path.exists('safety-results.json') else {'vulnerabilities': []}; npm_audit = json.load(open('src/web/npm-audit-results.json')) if os.path.exists('src/web/npm-audit-results.json') else {'vulnerabilities': {}}; critical_bandit = [issue for issue in bandit.get('results', []) if issue.get('issue_severity') == 'HIGH']; critical_safety = [vuln for vuln in safety.get('vulnerabilities', []) if vuln.get('severity') == 'Critical']; critical_npm = {k: v for k, v in npm_audit.get('vulnerabilities', {}).items() if v.get('severity') == 'critical'}; with open('security-report.txt', 'w') as f: f.write('# Security Scan Results\n\n'); f.write(f'## Python Security Issues\n\n'); f.write(f'- Critical Bandit issues: {len(critical_bandit)}\n'); f.write(f'- Critical Safety issues: {len(critical_safety)}\n\n'); f.write(f'## JavaScript Security Issues\n\n'); f.write(f'- Critical npm audit issues: {len(critical_npm)}\n')" || true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: ['*-results.json', 'security-report.txt']
+      
+      - name: Create issue for critical vulnerabilities
+        run: python -c "import json; import os; bandit = json.load(open('bandit-results.json')) if os.path.exists('bandit-results.json') else {'results': []}; safety = json.load(open('safety-results.json')) if os.path.exists('safety-results.json') else {'vulnerabilities': []}; npm_audit = json.load(open('src/web/npm-audit-results.json')) if os.path.exists('src/web/npm-audit-results.json') else {'vulnerabilities': {}}; critical_bandit = [issue for issue in bandit.get('results', []) if issue.get('issue_severity') == 'HIGH']; critical_safety = [vuln for vuln in safety.get('vulnerabilities', []) if vuln.get('severity') == 'Critical']; critical_npm = {k: v for k, v in npm_audit.get('vulnerabilities', {}).items() if v.get('severity') == 'critical'}; exit(1 if len(critical_bandit) > 0 or len(critical_safety) > 0 or len(critical_npm) > 0 else 0)" && peter-evans/create-issue-from-file@v4 --title "Critical Security Vulnerabilities Detected" --content-filepath security-report.txt --labels "security, priority-critical" || echo "No critical vulnerabilities found"
+
+  dependency-analysis:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Review dependencies
+        uses: actions/dependency-review-action@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install pip-audit
+        run: pip install pip-audit
+      
+      - name: Check for outdated Python dependencies
+        run: pip-audit -r src/backend/requirements.txt -r src/backend/requirements-dev.txt -o json > python-deps-audit.json || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Check for outdated npm dependencies
+        run: cd src/web && npm outdated --json > npm-outdated.json || true
+      
+      - name: Generate dependency report
+        run: python -c "import json; import os; python_audit = json.load(open('python-deps-audit.json')) if os.path.exists('python-deps-audit.json') else []; npm_outdated = json.load(open('src/web/npm-outdated.json')) if os.path.exists('src/web/npm-outdated.json') else {}; with open('dependency-report.txt', 'w') as f: f.write('# Dependency Analysis Report\n\n'); f.write('## Python Dependencies\n\n'); f.write(f'- Vulnerable dependencies: {len(python_audit)}\n\n'); f.write('## JavaScript Dependencies\n\n'); f.write(f'- Outdated dependencies: {len(npm_outdated)}\n')" || true
+      
+      - name: Upload dependency reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-reports
+          path: ['python-deps-audit.json', 'src/web/npm-outdated.json', 'dependency-report.txt']
+      
+      - name: Create issue for dependency updates
+        if: ${{ success() }}
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: Dependency Updates Required
+          content-filepath: dependency-report.txt
+          labels: dependencies, maintenance
+
+  infrastructure-validation:
+    name: Infrastructure Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      
+      - name: Install tflint
+        run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      
+      - name: Terraform Format Check - Backend
+        run: terraform fmt -check -recursive src/backend/terraform || true
+      
+      - name: Terraform Format Check - Infrastructure
+        run: terraform fmt -check -recursive infrastructure/terraform || true
+      
+      - name: Terraform Init - Backend
+        run: cd src/backend/terraform && terraform init -backend=false
+      
+      - name: Terraform Validate - Backend
+        run: cd src/backend/terraform && terraform validate
+      
+      - name: Run tflint - Backend
+        run: cd src/backend/terraform && tflint --recursive > tflint-backend-report.txt || true
+      
+      - name: Terraform Init - Infrastructure
+        run: cd infrastructure/terraform/vpc && terraform init -backend=false
+      
+      - name: Terraform Validate - Infrastructure
+        run: cd infrastructure/terraform/vpc && terraform validate
+      
+      - name: Run tflint - Infrastructure
+        run: cd infrastructure/terraform && tflint --recursive > tflint-infra-report.txt || true
+      
+      - name: Upload infrastructure validation reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: infrastructure-reports
+          path: ['src/backend/terraform/tflint-backend-report.txt', 'infrastructure/terraform/tflint-infra-report.txt']
+
+  documentation-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: pip install sphinx sphinx-rtd-theme doc8 restructuredtext-lint
+      
+      - name: Check documentation syntax
+        run: doc8 docs/ --ignore-path docs/_build > doc-lint-report.txt || true
+      
+      - name: Build documentation
+        run: cd docs && sphinx-build -b html . _build/html > sphinx-build-log.txt 2>&1 || true
+      
+      - name: Check for broken links
+        run: cd docs && sphinx-build -b linkcheck . _build/linkcheck > broken-links-report.txt 2>&1 || true
+      
+      - name: Upload documentation reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-reports
+          path: ['doc-lint-report.txt', 'docs/sphinx-build-log.txt', 'docs/broken-links-report.txt', 'docs/_build/html/']
+
+  quality-report:
+    name: Generate Quality Report
+    needs: [code-quality-analysis, test-coverage-analysis, security-scanning, dependency-analysis, infrastructure-validation, documentation-validation]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Generate quality summary
+        run: |
+          echo "# Weekly Quality Report" > quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Code Quality" >> quality-summary.md
+          echo "- Status: ${{ needs.code-quality-analysis.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Test Coverage" >> quality-summary.md
+          echo "- Status: ${{ needs.test-coverage-analysis.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Security Scanning" >> quality-summary.md
+          echo "- Status: ${{ needs.security-scanning.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Dependency Analysis" >> quality-summary.md
+          echo "- Status: ${{ needs.dependency-analysis.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Infrastructure Validation" >> quality-summary.md
+          echo "- Status: ${{ needs.infrastructure-validation.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "## Documentation Validation" >> quality-summary.md
+          echo "- Status: ${{ needs.documentation-validation.result == 'success' && '✅' || '❌' }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+          echo "See attached artifacts for detailed reports." >> quality-summary.md
+      
+      - name: Upload quality summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: quality-summary
+          path: quality-summary.md
+      
+      - name: Create quality report issue
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: Weekly Code Quality Report
+          content-filepath: quality-summary.md
+          labels: quality-report, maintenance
