@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-config-staging
+  namespace: self-healing-pipeline-staging
+  labels:
+    app: data-pipeline
+    component: common
+    environment: staging
+    managed-by: kustomize
+data:
+  LOG_LEVEL: "INFO"
+  ENABLE_METRICS: "true"
+  METRICS_EXPORT_INTERVAL_SECONDS: "60"
+  GCP_PROJECT_ID: "self-healing-pipeline-staging"
+  GCP_REGION: "us-central1"
+  GCP_ZONE: "us-central1-a"
+  COMPOSER_ENVIRONMENT: "self-healing-pipeline-staging"
+  BIGQUERY_DATASET: "self_healing_pipeline_staging"
+  GCS_BUCKET: "self-healing-pipeline-staging"
+  API_TIMEOUT_SECONDS: "45"
+  MAX_RETRIES: "3"
+  RETRY_BACKOFF_FACTOR: "2.0"
+  ENABLE_TRACING: "true"
+  ENABLE_PROFILING: "false"
+  BATCH_SIZE: "1000"
+  MAX_BATCH_SIZE: "10000"
+  PARALLEL_WORKERS: "4"
+  MAX_PARALLEL_WORKERS: "12"
+  ENABLE_VERBOSE_LOGGING: "false"
+  ENABLE_LOCAL_DEVELOPMENT: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quality-config-staging
+  namespace: self-healing-pipeline-staging
+  labels:
+    app: data-pipeline
+    component: quality
+    environment: staging
+    managed-by: kustomize
+data:
+  VALIDATION_TIMEOUT_SECONDS: "450"
+  QUALITY_SCORE_THRESHOLD: "90"
+  SCHEMA_VALIDATION_ENABLED: "true"
+  CONTENT_VALIDATION_ENABLED: "true"
+  RELATIONSHIP_VALIDATION_ENABLED: "true"
+  STATISTICAL_VALIDATION_ENABLED: "true"
+  VALIDATION_BATCH_SIZE: "1000"
+  EXPECTATIONS_STORAGE_PATH: "/app/expectations"
+  VALIDATION_RESULTS_DATASET: "self_healing_pipeline_staging"
+  VALIDATION_RESULTS_TABLE: "quality_validation_results"
+  GREAT_EXPECTATIONS_VERSION: "0.15.50"
+  CRITICAL_THRESHOLD: "0.8"
+  WARNING_THRESHOLD: "0.9"
+  AUTO_FIX_ENABLED: "true"
+  NOTIFICATION_ON_FAILURE: "true"
+  ENABLE_VALIDATION_DEBUGGING: "false"
+  SAVE_VALIDATION_SAMPLES: "true"
+  MAX_VALIDATION_SAMPLES: "50"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healing-config-staging
+  namespace: self-healing-pipeline-staging
+  labels:
+    app: data-pipeline
+    component: self-healing
+    environment: staging
+    managed-by: kustomize
+data:
+  HEALING_MODE: "SEMI_AUTOMATIC"
+  CONFIDENCE_THRESHOLD: "80"
+  MAX_RETRY_ATTEMPTS: "3"
+  APPROVAL_REQUIRED_CRITICAL: "true"
+  APPROVAL_REQUIRED_HIGH: "true"
+  APPROVAL_REQUIRED_MEDIUM: "false"
+  APPROVAL_REQUIRED_LOW: "false"
+  LEARNING_MODE: "active"
+  MODEL_REGISTRY: "models/staging"
+  MODEL_VERSION: "latest"
+  VERTEX_AI_ENDPOINT: "projects/self-healing-pipeline-staging/locations/us-central1/endpoints/self-healing-endpoint"
+  ISSUE_PATTERN_DATASET: "self_healing_pipeline_staging"
+  ISSUE_PATTERN_TABLE: "issue_patterns"
+  HEALING_ACTIONS_DATASET: "self_healing_pipeline_staging"
+  HEALING_ACTIONS_TABLE: "healing_actions"
+  HEALING_EXECUTIONS_DATASET: "self_healing_pipeline_staging"
+  HEALING_EXECUTIONS_TABLE: "healing_executions"
+  DATA_CORRECTION_CONFIDENCE_THRESHOLD: "85"
+  PIPELINE_ADJUSTMENT_CONFIDENCE_THRESHOLD: "80"
+  RESOURCE_OPTIMIZATION_CONFIDENCE_THRESHOLD: "75"
+  RECOVERY_CONFIDENCE_THRESHOLD: "85"
+  VERSION_RETENTION: "5"
+  RETRAINING_INTERVAL_DAYS: "7"
+  ENABLE_MOCK_MODELS: "false"
+  ENABLE_HEALING_DEBUGGING: "false"
+  SAVE_HEALING_ATTEMPTS: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-config-staging
+  namespace: self-healing-pipeline-staging
+  labels:
+    app: data-pipeline
+    component: monitoring
+    environment: staging
+    managed-by: kustomize
+data:
+  ALERT_SEVERITY_LEVELS: "critical,high,medium,low"
+  CRITICAL_ALERT_THRESHOLD: "1"
+  HIGH_ALERT_THRESHOLD: "3"
+  MEDIUM_ALERT_THRESHOLD: "5"
+  LOW_ALERT_THRESHOLD: "10"
+  TEAMS_WEBHOOK_ENABLED: "true"
+  TEAMS_WEBHOOK_URL: "https://staging-webhook.example.com/teams"
+  EMAIL_ALERTS_ENABLED: "true"
+  EMAIL_RECIPIENTS: "staging-alerts@example.com,ops-team@example.com"
+  ALERT_CORRELATION_ENABLED: "true"
+  ANOMALY_DETECTION_ENABLED: "true"
+  METRICS_RETENTION_DAYS: "30"
+  DASHBOARD_REFRESH_INTERVAL_SECONDS: "60"
+  ALERT_ESCALATION_MINUTES: "30"
+  MONITORING_DATASET: "self_healing_pipeline_staging"
+  ALERTS_TABLE: "pipeline_alerts"
+  METRICS_TABLE: "pipeline_metrics"
+  METRICS_COLLECTION_INTERVAL_SECONDS: "60"
+  LOG_ANALYSIS_ENABLED: "true"
+  ANOMALY_DETECTION_SENSITIVITY: "0.7"
+  ANOMALY_DETECTION_TRAINING_PERIOD_DAYS: "14"
+  ANOMALY_DETECTION_MIN_DATA_POINTS: "100"
+  ALERT_DEDUPLICATION_WINDOW_MINUTES: "10"
+  PIPELINE_FAILURE_RATE_WARNING: "0.05"
+  PIPELINE_FAILURE_RATE_CRITICAL: "0.1"
+  DATA_PROCESSING_LATENCY_WARNING: "0.2"
+  DATA_PROCESSING_LATENCY_CRITICAL: "0.5"
+  QUALITY_VALIDATION_FAILURE_WARNING: "0.02"
+  QUALITY_VALIDATION_FAILURE_CRITICAL: "0.05"
+  SELF_HEALING_SUCCESS_RATE_WARNING: "0.85"
+  SELF_HEALING_SUCCESS_RATE_CRITICAL: "0.75"
+  RESOURCE_UTILIZATION_WARNING: "0.7"
+  RESOURCE_UTILIZATION_CRITICAL: "0.85"
+  ERROR_RATE_WARNING: "2.0"
+  ERROR_RATE_CRITICAL: "5.0"
+  ENABLE_DEBUG_ALERTS: "false"
+  ENABLE_ALERT_TESTING: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: staging-feature-flags
+  namespace: self-healing-pipeline-staging
+  labels:
+    app: data-pipeline
+    component: feature-flags
+    environment: staging
+    managed-by: kustomize
+data:
+  ENABLE_AI_PREDICTIONS: "true"
+  ENABLE_ADVANCED_MONITORING: "true"
+  ENABLE_EXPERIMENTAL_FEATURES: "false"
+  ENABLE_SELF_HEALING: "true"
+  ENABLE_QUERY_OPTIMIZATION: "true"
+  ENABLE_SCHEMA_OPTIMIZATION: "true"
+  ENABLE_RESOURCE_OPTIMIZATION: "true"
+  ENABLE_AUTO_IMPLEMENTATION: "false"
+  ENABLE_APPROVAL_WORKFLOW: "true"
+  ENABLE_MOCK_DATA: "false"
+  ENABLE_DEBUG_TOOLS: "false"
+  ENABLE_PERFORMANCE_TESTING: "true"
+  ENABLE_AI_PLAYGROUND: "false"
+  ENABLE_FEATURE_TESTING: "false"
+  ENABLE_CHAOS_TESTING: "false"
