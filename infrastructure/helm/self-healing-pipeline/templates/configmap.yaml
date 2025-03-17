@@ -1,0 +1,699 @@
+{{- if or .Values.backend.enabled .Values.web.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-config
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: config
+  annotations:
+    description: "Main configuration for the self-healing data pipeline"
+data:
+  config.yaml: |
+    app:
+      name: {{ .Chart.Name }}
+      version: {{ .Chart.Version }}
+      description: {{ .Chart.Description }}
+      environment: {{ .Values.global.environment }}
+
+    logging:
+      level: {{ .Values.config.pipeline.logLevel }}
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      file_path: "logs/pipeline.log"
+      max_size_mb: 100
+      backup_count: 5
+      console_output: true
+
+    gcp:
+      project_id: {{ .Values.global.project.id }}
+      location: {{ .Values.global.project.region }}
+      service_account: ""
+
+    bigquery:
+      dataset: {{ .Values.config.pipeline.bigqueryDataset }}
+      location: {{ .Values.global.project.region }}
+      query_timeout_seconds: 300
+      max_slots: 100
+      use_legacy_sql: false
+
+    gcs:
+      bucket: {{ .Values.config.pipeline.gcsBucket }}
+      staging_folder: "staging"
+      archive_folder: "archive"
+      temp_folder: "temp"
+      data_folder: "data"
+      config_folder: "config"
+      retention_days:
+        staging: 7
+        archive: 90
+        temp: 1
+
+    ingestion:
+      batch_size: 1000
+      max_batch_size: 5000
+      parallel_workers: 5
+      max_parallel_workers: 10
+      timeout_seconds: 300
+      retry_attempts: 3
+      retry_backoff_factor: 2.0
+      sources:
+        gcs:
+          enabled: true
+          polling_interval_seconds: 60
+        cloud_sql:
+          enabled: true
+          connection_pool_size: 5
+          max_connections: 10
+        external_api:
+          enabled: true
+          request_timeout_seconds: 30
+          max_retries: 3
+          rate_limit_per_minute: 60
+
+    quality:
+      validation:
+        enabled: true
+        timeout_seconds: 300
+        max_retries: 3
+        quality_threshold: {{ div .Values.config.quality.qualityScoreThreshold 100.0 }}
+        scoring_model: "weighted"
+        rules_path: "/etc/quality-config/quality_rules.yaml"
+        great_expectations:
+          enabled: true
+          expectations_store: "gcs"
+          validations_store: "gcs"
+          data_docs_site: "gcs"
+      issue_handling:
+        critical_threshold: 0.6
+        warning_threshold: 0.8
+        auto_fix_enabled: {{ .Values.config.quality.enableAutoValidation }}
+        notification_on_failure: true
+
+    self_healing:
+      enabled: true
+      mode: {{ upper .Values.config.healing.mode }}
+      confidence_threshold: {{ div .Values.config.healing.confidenceThreshold 100.0 }}
+      max_retry_attempts: {{ .Values.config.healing.maxRetryAttempts }}
+      approval_required: {{ .Values.config.healing.approvalRequired }}
+      learning_enabled: {{ eq .Values.config.healing.learningMode "active" }}
+      rules_path: "/etc/healing-config/healing_rules.yaml"
+
+    api:
+      enabled: true
+      host: "0.0.0.0"
+      port: {{ .Values.backend.service.port }}
+      debug: {{ .Values.config.featureFlags.enableDebugMode }}
+      cors:
+        enabled: true
+        allow_origins: ["*"]
+        allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allow_headers: ["Authorization", "Content-Type"]
+
+    security:
+      encryption:
+        at_rest: true
+        in_transit: true
+        customer_managed_keys: false
+      access_control:
+        strict_mode: false
+        review_interval_days: 30
+
+    feature_flags:
+      enable_experimental_features: {{ .Values.config.featureFlags.enableExperimentalFeatures }}
+      enable_debug_mode: {{ .Values.config.featureFlags.enableDebugMode }}
+      enable_performance_testing: {{ .Values.config.featureFlags.enablePerformanceTesting }}
+      enable_mock_data: {{ .Values.config.featureFlags.enableMockData }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-quality-config
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: config
+  annotations:
+    description: "Data quality validation rules for the self-healing data pipeline"
+data:
+  quality_rules.yaml: |
+    version: "1.0"
+    description: "Data quality validation rules for the self-healing data pipeline"
+    rules:
+      - rule_id: "rule-schema-001"
+        name: "Customer Table Schema Validation"
+        description: "Validates the schema of the customer table against expected structure"
+        rule_type: "SCHEMA"
+        dimension: "VALIDITY"
+        enabled: true
+        target_dataset: "customer_data"
+        target_table: "customers"
+        parameters:
+          subtype: "schema_consistency"
+          expected_schema:
+            customer_id: "STRING"
+            customer_name: "STRING"
+            email: "STRING"
+            phone_number: "STRING"
+            address: "STRING"
+            city: "STRING"
+            state: "STRING"
+            zip_code: "STRING"
+            registration_date: "DATE"
+            last_update: "TIMESTAMP"
+        metadata:
+          severity: "CRITICAL"
+          owner: "data_quality_team"
+          tags: ["schema", "customer", "critical"]
+
+      - rule_id: "rule-schema-002"
+        name: "Sales Table Schema Validation"
+        description: "Validates the schema of the sales table against expected structure"
+        rule_type: "SCHEMA"
+        dimension: "VALIDITY"
+        enabled: true
+        target_dataset: "sales_metrics"
+        target_table: "sales"
+        parameters:
+          subtype: "schema_consistency"
+          expected_schema:
+            sale_id: "STRING"
+            customer_id: "STRING"
+            product_id: "STRING"
+            sale_date: "DATE"
+            quantity: "INTEGER"
+            unit_price: "FLOAT"
+            total_amount: "FLOAT"
+            discount_percent: "FLOAT"
+            payment_method: "STRING"
+            transaction_id: "STRING"
+        metadata:
+          severity: "CRITICAL"
+          owner: "data_quality_team"
+          tags: ["schema", "sales", "critical"]
+
+      - rule_id: "rule-content-001"
+        name: "Customer Email Not Null Validation"
+        description: "Validates that customer email addresses are not null"
+        rule_type: "CONTENT"
+        dimension: "COMPLETENESS"
+        enabled: true
+        target_dataset: "customer_data"
+        target_table: "customers"
+        parameters:
+          subtype: "not_null"
+          columns: ["email"]
+        metadata:
+          severity: "HIGH"
+          owner: "data_quality_team"
+          tags: ["content", "customer", "not_null"]
+
+      - rule_id: "rule-content-002"
+        name: "Sales Amount Range Validation"
+        description: "Validates that sales total_amount is within expected range"
+        rule_type: "CONTENT"
+        dimension: "ACCURACY"
+        enabled: true
+        target_dataset: "sales_metrics"
+        target_table: "sales"
+        parameters:
+          subtype: "value_range"
+          column: "total_amount"
+          min_value: 0.01
+          max_value: 10000.0
+        metadata:
+          severity: "MEDIUM"
+          owner: "data_quality_team"
+          tags: ["content", "sales", "range"]
+
+      - rule_id: "rule-relationship-001"
+        name: "Sales Customer Foreign Key Validation"
+        description: "Validates that customer_id in sales table exists in customers table"
+        rule_type: "RELATIONSHIP"
+        dimension: "CONSISTENCY"
+        enabled: true
+        target_dataset: "sales_metrics"
+        target_table: "sales"
+        parameters:
+          subtype: "referential_integrity"
+          column: "customer_id"
+          ref_dataset_id: "customer_data"
+          ref_table_id: "customers"
+          ref_column: "customer_id"
+        metadata:
+          severity: "HIGH"
+          owner: "data_quality_team"
+          tags: ["relationship", "sales", "foreign_key"]
+
+    rule_groups:
+      customer_data: ["rule-schema-001", "rule-content-001"]
+      sales_metrics: ["rule-schema-002", "rule-content-002", "rule-relationship-001"]
+
+    default_thresholds:
+      CRITICAL: 1.0
+      HIGH: 0.95
+      MEDIUM: 0.9
+      LOW: 0.8
+
+    metadata:
+      version: "1.0.0"
+      last_updated: "2023-06-15T00:00:00Z"
+      description: "Data quality validation rules for the self-healing data pipeline"
+      owner: "data_quality_team"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-healing-config
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: config
+  annotations:
+    description: "Self-healing rules for the self-healing data pipeline"
+data:
+  healing_rules.yaml: |
+    global_settings:
+      description: "Global configuration settings for the self-healing engine"
+      healing_mode: "{{ .Values.config.healing.mode }}"
+      confidence_threshold: {{ div .Values.config.healing.confidenceThreshold 100.0 }}
+      max_retry_attempts: {{ .Values.config.healing.maxRetryAttempts }}
+      approval_required: "{{ .Values.config.healing.approvalRequired }}"
+      learning_mode: "{{ .Values.config.healing.learningMode }}"
+
+    action_types:
+      description: "Configuration for different types of healing actions"
+      DATA_CORRECTION:
+        enabled: true
+        confidence_threshold: 0.9
+        max_retry_attempts: 2
+        approval_required: "high_impact_only"
+        description: "Corrects data quality issues such as missing values, outliers, and format errors"
+      SCHEMA_EVOLUTION:
+        enabled: true
+        confidence_threshold: 0.95
+        max_retry_attempts: 1
+        approval_required: "always"
+        description: "Handles schema changes and mapping between different versions"
+      PARAMETER_ADJUSTMENT:
+        enabled: true
+        confidence_threshold: 0.8
+        max_retry_attempts: 3
+        approval_required: "high_impact_only"
+        description: "Adjusts pipeline parameters to optimize performance or fix issues"
+      RESOURCE_SCALING:
+        enabled: true
+        confidence_threshold: 0.85
+        max_retry_attempts: 2
+        approval_required: "high_impact_only"
+        description: "Scales resources up or down to address resource-related issues"
+      PIPELINE_RETRY:
+        enabled: true
+        confidence_threshold: 0.75
+        max_retry_attempts: 3
+        approval_required: "never"
+        description: "Retries failed pipeline tasks with the same or adjusted parameters"
+
+    rules:
+      - rule_id: "missing_values_rule"
+        description: "Rule for handling missing values in datasets"
+        issue_type: "missing_values"
+        confidence_threshold: 0.85
+        actions:
+          - strategy: "mean_imputation"
+            parameters:
+              applicable_types: ["numeric", "float", "integer"]
+              min_non_null_ratio: 0.5
+            priority: 1
+          - strategy: "median_imputation"
+            parameters:
+              applicable_types: ["numeric", "float", "integer"]
+              outlier_sensitive: true
+            priority: 2
+          - strategy: "mode_imputation"
+            parameters:
+              applicable_types: ["categorical", "string", "boolean"]
+            priority: 1
+          - strategy: "constant_imputation"
+            parameters:
+              applicable_types: ["any"]
+              default_values:
+                string: ""
+                numeric: 0
+                boolean: false
+                timestamp: "1970-01-01T00:00:00Z"
+            priority: 3
+
+      - rule_id: "format_error_rule"
+        description: "Rule for handling format errors in datasets"
+        issue_type: "format_errors"
+        confidence_threshold: 0.85
+        actions:
+          - strategy: "date_format_correction"
+            parameters:
+              input_formats: ["%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%Y/%m/%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]
+              output_format: "%Y-%m-%d"
+              applicable_types: ["string", "timestamp"]
+            priority: 1
+          - strategy: "number_format_correction"
+            parameters:
+              thousands_separator: ","
+              decimal_separator: "."
+              applicable_types: ["string"]
+            priority: 1
+          - strategy: "string_format_correction"
+            parameters:
+              trim_whitespace: true
+              case: "preserve"
+              applicable_types: ["string"]
+            priority: 1
+
+      - rule_id: "schema_drift_rule"
+        description: "Rule for handling schema drift issues"
+        issue_type: "schema_drift"
+        confidence_threshold: 0.95
+        actions:
+          - strategy: "column_mapping"
+            parameters:
+              fuzzy_match_threshold: 0.8
+              case_sensitive: false
+            priority: 1
+          - strategy: "type_casting"
+            parameters:
+              allow_safe_casts: true
+              strict_mode: false
+            priority: 2
+
+      - rule_id: "resource_exhaustion_rule"
+        description: "Rule for handling resource exhaustion issues"
+        issue_type: "resource_exhaustion"
+        confidence_threshold: 0.85
+        actions:
+          - strategy: "increase_memory"
+            parameters:
+              increment_factor: 1.5
+              max_memory_gb: 16
+            priority: 1
+          - strategy: "increase_cpu"
+            parameters:
+              increment_factor: 1.5
+              max_cpu_count: 8
+            priority: 2
+          - strategy: "increase_slots"
+            parameters:
+              increment_factor: 2.0
+              max_slots: 2000
+            priority: 3
+
+    rule_sets:
+      data_quality: ["missing_values_rule", "format_error_rule", "schema_drift_rule"]
+      pipeline_execution: ["resource_exhaustion_rule"]
+
+    severity_thresholds:
+      critical:
+        confidence_threshold: 0.95
+        approval_required: "always"
+        max_retry_attempts: 1
+      high:
+        confidence_threshold: 0.9
+        approval_required: "high_impact_only"
+        max_retry_attempts: 2
+      medium:
+        confidence_threshold: 0.85
+        approval_required: "high_impact_only"
+        max_retry_attempts: 3
+      low:
+        confidence_threshold: 0.75
+        approval_required: "never"
+        max_retry_attempts: 3
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-monitoring-config
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: config
+  annotations:
+    description: "Monitoring and alerting configuration for the self-healing data pipeline"
+data:
+  monitoring_config.yaml: |
+    version: "1.0"
+    description: "Monitoring and alerting configuration for the self-healing data pipeline"
+    general:
+      environment: "{{ .Values.global.environment }}"
+      project_id: "{{ .Values.global.project.id }}"
+      region: "{{ .Values.global.project.region }}"
+      log_level: "{{ .Values.config.pipeline.logLevel }}"
+      metrics_retention_days: 30
+      enable_debug_metrics: {{ .Values.config.featureFlags.enableDebugMode }}
+
+    metrics_collection:
+      collection_interval_seconds: 60
+      batch_size: 100
+      custom_metrics_prefix: "pipeline"
+      standard_metrics:
+        enabled: {{ .Values.config.pipeline.enableMetrics }}
+        include_system_metrics: true
+        include_gcp_service_metrics: true
+
+    anomaly_detection:
+      enabled: true
+      detection_interval_minutes: 5
+      baseline_update_interval_hours: 24
+      min_data_points_for_detection: 10
+      detectors:
+        statistical:
+          enabled: true
+          methods:
+            z_score:
+              enabled: true
+              default_threshold: 3.0
+              lookback_window_hours: 24
+              min_data_points: 10
+            iqr:
+              enabled: true
+              default_multiplier: 1.5
+              lookback_window_hours: 24
+              min_data_points: 10
+        machine_learning:
+          enabled: true
+          model_update_interval_days: 7
+          min_training_data_points: 100
+          methods:
+            isolation_forest:
+              enabled: true
+              contamination: 0.05
+              n_estimators: 100
+              max_features: 1.0
+            autoencoder:
+              enabled: true
+              hidden_layers: [64, 32, 16, 32, 64]
+              activation: "relu"
+              reconstruction_error_threshold: 0.3
+              epochs: 50
+              batch_size: 32
+
+    alerting:
+      enabled: true
+      alert_evaluation_interval_seconds: 60
+      alert_deduplication_window_minutes: 15
+      alert_correlation_enabled: true
+      alert_grouping_window_minutes: 10
+      max_alerts_per_group: 10
+      default_severity: "MEDIUM"
+      severity_definitions:
+        CRITICAL:
+          description: "Immediate action required - severe business impact"
+          color: "#FF0000"
+          icon: "🚨"
+          auto_escalation_minutes: 15
+        HIGH:
+          description: "Urgent action required - significant business impact"
+          color: "#FFA500"
+          icon: "⚠️"
+          auto_escalation_minutes: 30
+        MEDIUM:
+          description: "Action required - moderate business impact"
+          color: "#FFFF00"
+          icon: "⚠"
+          auto_escalation_minutes: 60
+        LOW:
+          description: "Action recommended - minor business impact"
+          color: "#00FF00"
+          icon: "ℹ️"
+          auto_escalation_minutes: 240
+
+    notification:
+      channels:
+        teams:
+          enabled: true
+          webhooks:
+            data_engineering:
+              url: "${TEAMS_WEBHOOK_DATA_ENGINEERING}"
+              description: "Data Engineering team channel"
+            operations:
+              url: "${TEAMS_WEBHOOK_OPERATIONS}"
+              description: "Operations team channel"
+            data_quality:
+              url: "${TEAMS_WEBHOOK_DATA_QUALITY}"
+              description: "Data Quality team channel"
+        email:
+          enabled: true
+          sender: "${EMAIL_SENDER:pipeline-alerts@example.com}"
+          smtp_server: "${SMTP_SERVER}"
+          smtp_port: "${SMTP_PORT:587}"
+          smtp_username: "${SMTP_USERNAME}"
+          smtp_password: "${SMTP_PASSWORD}"
+          use_tls: true
+          recipients:
+            critical: ["oncall@example.com", "data-engineering-alerts@example.com"]
+            data_quality: ["data-quality-team@example.com"]
+            infrastructure: ["infrastructure-team@example.com"]
+
+    health_checks:
+      enabled: true
+      check_interval_seconds: 60
+      components:
+        ingestion:
+          enabled: true
+          endpoints:
+            - name: "GCS Connector"
+              type: "internal"
+              check_method: "function_call"
+              function: "check_gcs_connector_health"
+            - name: "Cloud SQL Connector"
+              type: "internal"
+              check_method: "function_call"
+              function: "check_cloudsql_connector_health"
+            - name: "External API Connector"
+              type: "internal"
+              check_method: "function_call"
+              function: "check_api_connector_health"
+        processing:
+          enabled: true
+          endpoints:
+            - name: "BigQuery"
+              type: "service"
+              check_method: "query"
+              query: "SELECT 1"
+            - name: "Cloud Composer"
+              type: "service"
+              check_method: "api_call"
+              endpoint: "airflow/api/v1/health"
+
+  alert_rules.yaml: |
+    version: "1.0"
+    description: "Alert rules configuration for the self-healing data pipeline"
+    rule_groups:
+      - name: "pipeline_health"
+        description: "Rules for monitoring overall pipeline health and execution status"
+        rules:
+          - id: "pipeline_failure_rate"
+            name: "Pipeline Failure Rate High"
+            description: "Alert when pipeline failure rate exceeds threshold"
+            rule_type: "THRESHOLD"
+            conditions:
+              metric_path: "pipeline_failure_rate"
+              operator: ">"
+              threshold: 0.1
+              lookback_period_hours: 24
+            severity: "HIGH"
+            actions:
+              notification:
+                channels: ["teams.data_engineering", "teams.operations"]
+                message: "Pipeline failure rate has exceeded 10% in the last 24 hours"
+              self_healing:
+                enabled: true
+                action_type: "ANALYSIS"
+                confidence_threshold: 0.8
+            enabled: true
+
+          - id: "task_failure_count"
+            name: "Critical Task Failures"
+            description: "Alert when critical tasks fail"
+            rule_type: "THRESHOLD"
+            conditions:
+              metric_path: "task_failure_count"
+              operator: ">="
+              threshold: 1
+              lookback_period_hours: 1
+              filters:
+                task_type: "critical"
+            severity: "CRITICAL"
+            actions:
+              notification:
+                channels: ["teams.operations", "email.critical"]
+                message: "Critical task failure detected"
+              self_healing:
+                enabled: true
+                action_type: "PIPELINE_RETRY"
+                confidence_threshold: 0.9
+            enabled: true
+
+      - name: "data_quality"
+        description: "Rules for monitoring data quality metrics and validation results"
+        rules:
+          - id: "quality_score_low"
+            name: "Data Quality Score Low"
+            description: "Alert when data quality score falls below threshold"
+            rule_type: "THRESHOLD"
+            conditions:
+              metric_path: "data_quality_score"
+              operator: "<"
+              threshold: {{ div .Values.config.quality.qualityScoreThreshold 100.0 }}
+              lookback_period_hours: 24
+            severity: "HIGH"
+            actions:
+              notification:
+                channels: ["teams.data_engineering", "teams.data_quality"]
+                message: "Data quality score has fallen below {{ .Values.config.quality.qualityScoreThreshold }}%"
+              self_healing:
+                enabled: true
+                action_type: "DATA_CORRECTION"
+                confidence_threshold: 0.85
+            enabled: true
+
+      - name: "resource_utilization"
+        description: "Rules for monitoring resource utilization and performance"
+        rules:
+          - id: "bigquery_slots_high"
+            name: "High BigQuery Slot Utilization"
+            description: "Alert when BigQuery slot utilization is high"
+            rule_type: "THRESHOLD"
+            conditions:
+              metric_path: "bigquery_slots_usage"
+              operator: ">"
+              threshold: 0.85
+              lookback_period_hours: 1
+            severity: "MEDIUM"
+            actions:
+              notification:
+                channels: ["teams.operations"]
+                message: "BigQuery slot utilization exceeds 85%"
+              self_healing:
+                enabled: true
+                action_type: "RESOURCE_SCALING"
+                confidence_threshold: 0.9
+            enabled: true
+
+    compound_rules:
+      - id: "pipeline_health_critical"
+        name: "Critical Pipeline Health Issues"
+        description: "Compound rule for detecting critical pipeline health issues"
+        rule_type: "COMPOUND"
+        conditions:
+          operator: "OR"
+          rules: ["pipeline_failure_rate", "task_failure_count"]
+        severity: "CRITICAL"
+        actions:
+          notification:
+            channels: ["teams.operations", "email.critical"]
+            message: "Critical pipeline health issues detected"
+          self_healing:
+            enabled: true
+            action_type: "ANALYSIS"
+            confidence_threshold: 0.9
+        enabled: true
+{{- end }}
