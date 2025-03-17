@@ -1,0 +1,111 @@
+"""
+Entry point for the machine learning utilities module in the self-healing data pipeline.
+This module provides a unified interface for feature engineering, model management, prediction operations, and Vertex AI integration,
+supporting the AI-driven self-healing capabilities of the pipeline.
+"""
+
+from utils.ml.feature_utils import (  # from src/backend/utils/ml/feature_utils.py
+    prepare_features_for_model,
+    extract_features,
+    normalize_numeric_features,
+    encode_categorical_features,
+    vectorize_text_features,
+    extract_datetime_features,
+    handle_missing_values,
+    select_features,
+    create_feature_config,
+    save_feature_metadata,
+    load_feature_metadata,
+    FeatureProcessor,
+    FeatureSelector,
+    FeatureStore
+)
+from utils.ml.model_utils import (  # from src/backend/utils/ml/model_utils.py
+    save_model,
+    load_model,
+    get_model_info,
+    create_model_path,
+    list_models,
+    list_model_versions,
+    delete_model,
+    delete_model_version,
+    save_model_metadata,
+    load_model_metadata,
+    ModelFormatError,
+    ModelIOError
+)
+from utils.ml.prediction_utils import (  # from src/backend/utils/ml/prediction_utils.py
+    predict,
+    batch_predict,
+    predict_with_local_model,
+    predict_with_remote_model,
+    preprocess_prediction_input,
+    postprocess_prediction_output,
+    calculate_prediction_confidence,
+    validate_prediction_input,
+    PredictionError,
+    PredictionBatch,
+    ModelPredictor
+)
+from utils.ml.vertex_client import (  # from src/backend/utils/ml/vertex_client.py
+    get_vertex_client,
+    upload_model_to_vertex,
+    deploy_model_to_endpoint,
+    predict_with_vertex,
+    format_vertex_request,
+    create_batch_prediction_job,
+    VertexAIClient,
+    VertexModelDeployment,
+    VertexBatchPredictionJob,
+    VertexAIError
+)
+
+__all__ = [
+    "prepare_features_for_model",
+    "extract_features",
+    "normalize_numeric_features",
+    "encode_categorical_features",
+    "vectorize_text_features",
+    "extract_datetime_features",
+    "handle_missing_values",
+    "select_features",
+    "create_feature_config",
+    "save_feature_metadata",
+    "load_feature_metadata",
+    "FeatureProcessor",
+    "FeatureSelector",
+    "FeatureStore",
+    "save_model",
+    "load_model",
+    "get_model_info",
+    "create_model_path",
+    "list_models",
+    "list_model_versions",
+    "delete_model",
+    "delete_model_version",
+    "save_model_metadata",
+    "load_model_metadata",
+    "ModelFormatError",
+    "ModelIOError",
+    "predict",
+    "batch_predict",
+    "predict_with_local_model",
+    "predict_with_remote_model",
+    "preprocess_prediction_input",
+    "postprocess_prediction_output",
+    "calculate_prediction_confidence",
+    "validate_prediction_input",
+    "PredictionError",
+    "PredictionBatch",
+    "ModelPredictor",
+    "get_vertex_client",
+    "upload_model_to_vertex",
+    "deploy_model_to_endpoint",
+    "predict_with_vertex",
+    "format_vertex_request",
+    "create_batch_prediction_job",
+    "VertexAIClient",
+    "VertexModelDeployment",
+    "VertexBatchPredictionJob",
+    "VertexAIError"
+]
