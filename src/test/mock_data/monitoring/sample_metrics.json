@@ -1,0 +1,1065 @@
+import json
+import logging
+import datetime
+from typing import Dict, List, Any, Optional, Tuple, Set
+import pandas as pd
+import numpy as np
+from dataclasses import dataclass
+from enum import Enum
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+from google.cloud import monitoring_v3
+from google.cloud import bigquery
+
+# Constants
+DEFAULT_ANOMALY_THRESHOLD = 0.25  # 25% deviation
+CRITICAL_ANOMALY_THRESHOLD = 0.50  # 50% deviation
+SEVERITY_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+METRIC_TREND_WINDOW = 7  # Days to analyze for trends
+CORRELATION_THRESHOLD = 0.7  # Minimum correlation coefficient to consider
+
+
+class MetricType(Enum):
+    """Enumeration of supported metric types."""
+    GAUGE = "GAUGE"
+    COUNTER = "COUNTER"
+    HISTOGRAM = "HISTOGRAM"
+    SUMMARY = "SUMMARY"
+
+
+class AlertSeverity(Enum):
+    """Enumeration of alert severity levels."""
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+@dataclass
+class Metric:
+    """Data class representing a single metric measurement."""
+    name: str
+    value: float
+    metric_type: MetricType
+    timestamp: datetime.datetime
+    labels: Dict[str, str]
+    description: str
+    unit: str
+
+
+@dataclass
+class Anomaly:
+    """Data class representing a detected anomaly in metrics."""
+    metric_name: str
+    timestamp: datetime.datetime
+    description: str
+    severity: AlertSeverity
+    value: float
+    baseline: float
+    change_percentage: float
+    affected_component: str
+    affected_pipeline: str
+
+
+@dataclass
+class MetricCorrelation:
+    """Data class representing a correlation between metrics."""
+    primary_metric: str
+    correlated_metrics: List[str]
+    correlation_strength: str
+    coefficient: float
+
+
+@dataclass
+class Alert:
+    """Data class representing an alert generated from anomalies."""
+    title: str
+    description: str
+    severity: AlertSeverity
+    timestamp: datetime.datetime
+    affected_component: str
+    affected_pipeline: str
+    metric_name: str
+    value: float
+    baseline: float
+    change_percentage: float
+    recommended_actions: List[str]
+
+
+class MetricsAnalyzer:
+    """
+    Analyzes pipeline metrics to detect anomalies, correlations, and generate alerts.
+    
+    This class provides comprehensive analysis of metrics from a self-healing data pipeline,
+    including anomaly detection, correlation analysis, and intelligent alerting with
+    recommended actions.
+    """
+    
+    def __init__(self, metrics_data: Dict[str, Any], custom_thresholds: Dict[str, float] = None):
+        """
+        Initialize the metrics analyzer with raw metrics data.
+        
+        Args:
+            metrics_data: Raw metrics data in the standard format
+            custom_thresholds: Optional dictionary of metric-specific thresholds
+        """
+        self.raw_data = metrics_data
+        self.metrics = self._parse_metrics(metrics_data.get('metrics', []))
+        self.anomalies = self._parse_anomalies(metrics_data.get('metric_patterns', {}).get('anomalies', []))
+        self.correlations = self._parse_correlations(metrics_data.get('metric_patterns', {}).get('correlations', []))
+        self.component_metrics = metrics_data.get('component_metrics', {})
+        self.pipeline_metrics = metrics_data.get('pipeline_metrics', {})
+        self.metadata = metrics_data.get('metadata', {})
+        self.custom_thresholds = custom_thresholds or {}
+        
+        # Create DataFrame for easier analysis
+        self.metrics_df = self._create_metrics_dataframe()
+        
+        # Track generated alerts
+        self.alerts = []
+    
+    def _parse_metrics(self, metrics_data: List[Dict[str, Any]]) -> List[Metric]:
+        """
+        Parse raw metrics data into Metric objects.
+        
+        Args:
+            metrics_data: List of metric dictionaries from the raw data
+            
+        Returns:
+            List of parsed Metric objects
+        """
+        parsed_metrics = []
+        for metric_data in metrics_data:
+            try:
+                metric = Metric(
+                    name=metric_data['name'],
+                    value=float(metric_data['value']),
+                    metric_type=MetricType(metric_data['metric_type']),
+                    timestamp=datetime.datetime.fromisoformat(metric_data['timestamp'].replace('Z', '+00:00')),
+                    labels=metric_data['labels'],
+                    description=metric_data['description'],
+                    unit=metric_data['unit']
+                )
+                parsed_metrics.append(metric)
+            except (KeyError, ValueError) as e:
+                logging.warning(f"Failed to parse metric: {e}")
+        return parsed_metrics
+    
+    def _parse_anomalies(self, anomalies_data: List[Dict[str, Any]]) -> List[Anomaly]:
+        """
+        Parse raw anomaly data into Anomaly objects.
+        
+        Args:
+            anomalies_data: List of anomaly dictionaries from the raw data
+            
+        Returns:
+            List of parsed Anomaly objects
+        """
+        parsed_anomalies = []
+        for anomaly_data in anomalies_data:
+            try:
+                # Extract change percentage from the description
+                description = anomaly_data['description']
+                change_percentage = float(description.split('%')[0])
+                
+                # Find the corresponding metric
+                metric = next((m for m in self.metrics 
+                              if m.name == anomaly_data['metric_name'] and 
+                              m.timestamp.isoformat().replace('+00:00', 'Z') == anomaly_data['timestamp']), None)
+                
+                if not metric:
+                    continue
+                
+                # Calculate baseline value
+                if "increase" in description:
+                    baseline = metric.value / (1 + change_percentage/100)
+                else:
+                    baseline = metric.value / (1 - change_percentage/100)
+                    
+                # Determine affected component and pipeline
+                affected_component = metric.labels.get('component', 'unknown')
+                affected_pipeline = metric.labels.get('pipeline_id', 'unknown')
+                
+                anomaly = Anomaly(
+                    metric_name=anomaly_data['metric_name'],
+                    timestamp=datetime.datetime.fromisoformat(anomaly_data['timestamp'].replace('Z', '+00:00')),
+                    description=anomaly_data['description'],
+                    severity=AlertSeverity(anomaly_data['severity']),
+                    value=metric.value,
+                    baseline=baseline,
+                    change_percentage=change_percentage,
+                    affected_component=affected_component,
+                    affected_pipeline=affected_pipeline
+                )
+                parsed_anomalies.append(anomaly)
+            except (KeyError, ValueError, StopIteration) as e:
+                logging.warning(f"Failed to parse anomaly: {e}")
+        return parsed_anomalies
+    
+    def _parse_correlations(self, correlations_data: List[Dict[str, Any]]) -> List[MetricCorrelation]:
+        """
+        Parse raw correlation data into MetricCorrelation objects.
+        
+        Args:
+            correlations_data: List of correlation dictionaries from the raw data
+            
+        Returns:
+            List of parsed MetricCorrelation objects
+        """
+        parsed_correlations = []
+        for correlation_data in correlations_data:
+            try:
+                # Map strength description to numeric value
+                strength_map = {
+                    "weak": 0.3,
+                    "moderate": 0.5,
+                    "strong": 0.8,
+                    "very strong": 0.9
+                }
+                coefficient = strength_map.get(correlation_data['correlation_strength'].lower(), 0.5)
+                
+                correlation = MetricCorrelation(
+                    primary_metric=correlation_data['primary_metric'],
+                    correlated_metrics=correlation_data['correlated_metrics'],
+                    correlation_strength=correlation_data['correlation_strength'],
+                    coefficient=coefficient
+                )
+                parsed_correlations.append(correlation)
+            except (KeyError, ValueError) as e:
+                logging.warning(f"Failed to parse correlation: {e}")
+        return parsed_correlations
+    
+    def _create_metrics_dataframe(self) -> pd.DataFrame:
+        """
+        Convert metrics list to pandas DataFrame for easier analysis.
+        
+        Returns:
+            DataFrame containing metrics data
+        """
+        data = []
+        for metric in self.metrics:
+            row = {
+                'name': metric.name,
+                'value': metric.value,
+                'metric_type': metric.metric_type.value,
+                'timestamp': metric.timestamp,
+                'description': metric.description,
+                'unit': metric.unit
+            }
+            # Add labels as columns
+            for key, value in metric.labels.items():
+                row[f'label_{key}'] = value
+            
+            data.append(row)
+        
+        df = pd.DataFrame(data)
+        return df
+    
+    def detect_anomalies(self) -> List[Anomaly]:
+        """
+        Detect anomalies in metrics beyond those already identified in the input data.
+        
+        This analyzes metric values against historical patterns to identify potential issues.
+        
+        Returns:
+            List of detected anomalies
+        """
+        detected_anomalies = []
+        
+        # Group metrics by name and pipeline_id
+        metrics_by_group = {}
+        for metric in self.metrics:
+            pipeline_id = metric.labels.get('pipeline_id', 'unknown')
+            key = (metric.name, pipeline_id)
+            if key not in metrics_by_group:
+                metrics_by_group[key] = []
+            metrics_by_group[key].append(metric)
+        
+        # For each group, analyze for anomalies
+        for (metric_name, pipeline_id), metrics_list in metrics_by_group.items():
+            # Sort by timestamp
+            metrics_list.sort(key=lambda m: m.timestamp)
+            
+            # Need at least 2 data points for comparison
+            if len(metrics_list) < 2:
+                continue
+            
+            # Get latest value
+            latest_metric = metrics_list[-1]
+            
+            # Get previous values for baseline
+            previous_metrics = metrics_list[:-1]
+            if not previous_metrics:
+                continue
+                
+            # Calculate baseline (average of previous values)
+            baseline = sum(m.value for m in previous_metrics) / len(previous_metrics)
+            
+            if baseline == 0:
+                # Avoid division by zero
+                continue
+                
+            # Calculate change percentage
+            change_percentage = ((latest_metric.value - baseline) / baseline) * 100
+            
+            # Determine threshold for this metric
+            threshold = self.custom_thresholds.get(metric_name, DEFAULT_ANOMALY_THRESHOLD) * 100
+            critical_threshold = CRITICAL_ANOMALY_THRESHOLD * 100
+            
+            # Skip if change is within threshold
+            if abs(change_percentage) <= threshold:
+                continue
+                
+            # Determine severity
+            if abs(change_percentage) > critical_threshold:
+                severity = AlertSeverity.CRITICAL
+            elif abs(change_percentage) > threshold * 1.5:
+                severity = AlertSeverity.HIGH
+            else:
+                severity = AlertSeverity.MEDIUM
+                
+            # Construct description
+            direction = "increase" if change_percentage > 0 else "decrease"
+            description = f"{abs(change_percentage):.1f}% {direction} from baseline"
+            
+            # Create anomaly object
+            anomaly = Anomaly(
+                metric_name=metric_name,
+                timestamp=latest_metric.timestamp,
+                description=description,
+                severity=severity,
+                value=latest_metric.value,
+                baseline=baseline,
+                change_percentage=change_percentage,
+                affected_component=latest_metric.labels.get('component', 'unknown'),
+                affected_pipeline=pipeline_id
+            )
+            
+            detected_anomalies.append(anomaly)
+        
+        # Combine with pre-identified anomalies
+        all_anomalies = self.anomalies + detected_anomalies
+        
+        # Sort by severity and timestamp
+        all_anomalies.sort(key=lambda a: (
+            list(reversed(SEVERITY_LEVELS)).index(a.severity.value),
+            a.timestamp
+        ), reverse=True)
+        
+        return all_anomalies
+    
+    def analyze_correlations(self) -> List[MetricCorrelation]:
+        """
+        Analyze correlations between metrics to identify patterns and relationships.
+        
+        This uses the pre-identified correlations and adds any newly detected ones.
+        
+        Returns:
+            List of metric correlations
+        """
+        # Start with pre-identified correlations
+        all_correlations = self.correlations.copy()
+        
+        # Calculate new correlations using the dataframe
+        if len(self.metrics_df) > 10:  # Need enough data points
+            # Group by metric name
+            metric_names = self.metrics_df['name'].unique()
+            
+            # For each component, analyze metrics together
+            for component in self.component_metrics:
+                component_metrics = self.component_metrics[component]
+                
+                # Filter metrics in this dataframe
+                component_df = self.metrics_df[self.metrics_df['name'].isin(component_metrics)]
+                
+                # Need at least 2 metrics to correlate
+                if len(component_metrics) < 2:
+                    continue
+                
+                # Create pivot table with timestamps as index and metric names as columns
+                pivot_data = []
+                for metric_name in component_metrics:
+                    metric_df = component_df[component_df['name'] == metric_name]
+                    for _, row in metric_df.iterrows():
+                        pivot_data.append({
+                            'timestamp': row['timestamp'],
+                            'metric_name': row['name'],
+                            'value': row['value']
+                        })
+                
+                if not pivot_data:
+                    continue
+                    
+                pivot_df = pd.DataFrame(pivot_data)
+                pivot_table = pivot_df.pivot_table(
+                    index='timestamp', 
+                    columns='metric_name', 
+                    values='value', 
+                    aggfunc='mean'
+                )
+                
+                # Calculate correlation matrix
+                if len(pivot_table) > 3:  # Need enough time points
+                    corr_matrix = pivot_table.corr()
+                    
+                    # Find strong correlations
+                    for i, metric1 in enumerate(corr_matrix.columns):
+                        for j, metric2 in enumerate(corr_matrix.columns):
+                            if i >= j:  # Skip duplicate pairs and self-correlations
+                                continue
+                                
+                            corr_value = corr_matrix.iloc[i, j]
+                            
+                            # Only consider strong correlations
+                            if abs(corr_value) >= CORRELATION_THRESHOLD:
+                                # Determine strength description
+                                if abs(corr_value) > 0.9:
+                                    strength = "very strong"
+                                elif abs(corr_value) > 0.7:
+                                    strength = "strong"
+                                elif abs(corr_value) > 0.5:
+                                    strength = "moderate"
+                                else:
+                                    strength = "weak"
+                                
+                                # Create correlation object
+                                correlation = MetricCorrelation(
+                                    primary_metric=metric1,
+                                    correlated_metrics=[metric2],
+                                    correlation_strength=strength,
+                                    coefficient=corr_value
+                                )
+                                
+                                # Check if this correlation is already included
+                                is_duplicate = False
+                                for existing_corr in all_correlations:
+                                    if (existing_corr.primary_metric == correlation.primary_metric and 
+                                        correlation.correlated_metrics[0] in existing_corr.correlated_metrics):
+                                        is_duplicate = True
+                                        break
+                                
+                                if not is_duplicate:
+                                    all_correlations.append(correlation)
+        
+        return all_correlations
+    
+    def generate_alerts(self) -> List[Alert]:
+        """
+        Generate alerts based on detected anomalies with appropriate severity, 
+        description, and recommended actions.
+        
+        Returns:
+            List of generated alerts
+        """
+        alerts = []
+        anomalies = self.detect_anomalies()
+        
+        for anomaly in anomalies:
+            # Generate recommended actions based on the type of anomaly
+            recommended_actions = self._get_recommended_actions(anomaly)
+            
+            # Create alert
+            alert = Alert(
+                title=f"{anomaly.metric_name} {anomaly.description}",
+                description=self._generate_alert_description(anomaly),
+                severity=anomaly.severity,
+                timestamp=anomaly.timestamp,
+                affected_component=anomaly.affected_component,
+                affected_pipeline=anomaly.affected_pipeline,
+                metric_name=anomaly.metric_name,
+                value=anomaly.value,
+                baseline=anomaly.baseline,
+                change_percentage=anomaly.change_percentage,
+                recommended_actions=recommended_actions
+            )
+            
+            alerts.append(alert)
+        
+        # Sort alerts by severity
+        alerts.sort(key=lambda a: list(reversed(SEVERITY_LEVELS)).index(a.severity.value))
+        
+        # Store alerts
+        self.alerts = alerts
+        
+        return alerts
+    
+    def _generate_alert_description(self, anomaly: Anomaly) -> str:
+        """
+        Generate a detailed description for an alert based on the anomaly.
+        
+        Args:
+            anomaly: The anomaly to describe
+            
+        Returns:
+            Formatted alert description
+        """
+        direction = "increased" if anomaly.change_percentage > 0 else "decreased"
+        
+        description = (
+            f"{anomaly.metric_name} has {direction} by {abs(anomaly.change_percentage):.1f}% "
+            f"from the baseline of {anomaly.baseline:.2f} to {anomaly.value:.2f} {anomaly.unit} "
+            f"for pipeline '{anomaly.affected_pipeline}' in component '{anomaly.affected_component}'."
+        )
+        
+        # Add correlation info if available
+        correlations = self.analyze_correlations()
+        related_correlations = [
+            c for c in correlations 
+            if c.primary_metric == anomaly.metric_name or anomaly.metric_name in c.correlated_metrics
+        ]
+        
+        if related_correlations:
+            description += "\n\nCorrelated metrics:"
+            for corr in related_correlations[:3]:  # Limit to top 3
+                if corr.primary_metric == anomaly.metric_name:
+                    metrics = ", ".join(corr.correlated_metrics)
+                    description += f"\n- {metrics} ({corr.correlation_strength} correlation)"
+                else:
+                    description += f"\n- {corr.primary_metric} ({corr.correlation_strength} correlation)"
+        
+        return description
+    
+    def _get_recommended_actions(self, anomaly: Anomaly) -> List[str]:
+        """
+        Generate recommended actions based on the anomaly type.
+        
+        Args:
+            anomaly: The anomaly to generate recommendations for
+            
+        Returns:
+            List of recommended actions
+        """
+        actions = []
+        
+        # General recommendations based on metric name
+        if "execution_time" in anomaly.metric_name:
+            actions.append("Check for resource constraints in the execution environment")
+            actions.append("Review recent changes to pipeline configuration")
+            actions.append("Analyze query performance in BigQuery")
+            
+        elif "quality_score" in anomaly.metric_name:
+            actions.append("Review data validation errors in quality reports")
+            actions.append("Check source data for schema or content changes")
+            actions.append("Verify data transformation logic for recent changes")
+            
+        elif "error_count" in anomaly.metric_name:
+            actions.append("Review error logs for specific failure patterns")
+            actions.append("Check for external dependencies that may be unavailable")
+            actions.append("Verify access permissions for data sources and destinations")
+            
+        elif "slot_utilization" in anomaly.metric_name:
+            actions.append("Consider increasing BigQuery slot allocation")
+            actions.append("Review and optimize resource-intensive queries")
+            actions.append("Check for concurrent jobs that may be competing for resources")
+            
+        elif "memory_utilization" in anomaly.metric_name or "cpu_utilization" in anomaly.metric_name:
+            actions.append("Check for resource leaks in pipeline components")
+            actions.append("Consider scaling up the affected component")
+            actions.append("Review workload distribution and scheduling")
+            
+        elif "api_response_time" in anomaly.metric_name:
+            actions.append("Check external API for performance issues")
+            actions.append("Verify network connectivity and latency")
+            actions.append("Consider implementing caching for API responses")
+            
+        elif "data_freshness" in anomaly.metric_name:
+            actions.append("Check for delays in source data availability")
+            actions.append("Review pipeline scheduling frequency")
+            actions.append("Optimize data extraction and loading processes")
+            
+        elif "healing" in anomaly.metric_name:
+            actions.append("Review self-healing operation logs for failure patterns")
+            actions.append("Check AI model performance and consider retraining")
+            actions.append("Verify that correction actions have necessary permissions")
+            
+        elif "cost" in anomaly.metric_name:
+            actions.append("Identify expensive queries for optimization")
+            actions.append("Review data storage and partitioning strategies")
+            actions.append("Consider implementing cost controls and quotas")
+            
+        # If no specific recommendations, add general ones
+        if not actions:
+            actions.append("Investigate recent changes to the affected component")
+            actions.append("Review system logs for errors or warnings")
+            actions.append("Check resource utilization during the anomaly period")
+        
+        # Add severity-specific recommendations
+        if anomaly.severity == AlertSeverity.CRITICAL:
+            actions.insert(0, "Immediately investigate the issue as it may impact service stability")
+        elif anomaly.severity == AlertSeverity.HIGH:
+            actions.insert(0, "Prioritize investigation as this issue may impact service quality")
+        
+        return actions
+    
+    def export_to_monitoring(self, project_id: str) -> None:
+        """
+        Export alerts to Cloud Monitoring.
+        
+        Args:
+            project_id: GCP project ID for Cloud Monitoring
+        """
+        client = monitoring_v3.AlertPolicyServiceClient()
+        
+        for alert in self.alerts:
+            # Only create incidents for HIGH and CRITICAL alerts
+            if alert.severity in [AlertSeverity.HIGH, AlertSeverity.CRITICAL]:
+                try:
+                    # Create alert policy
+                    display_name = f"{alert.severity.value}: {alert.title}"
+                    documentation = monitoring_v3.Documentation(
+                        content=alert.description,
+                        mime_type="text/markdown"
+                    )
+                    
+                    # Define condition based on metric
+                    condition = monitoring_v3.AlertPolicy.Condition(
+                        display_name=f"Condition for {alert.metric_name}",
+                        condition_threshold=monitoring_v3.AlertPolicy.Condition.MetricThreshold(
+                            filter=f'metric.type="custom.googleapis.com/{alert.metric_name}" AND '
+                                  f'resource.type="global" AND '
+                                  f'metadata.user_labels.pipeline_id="{alert.affected_pipeline}" AND '
+                                  f'metadata.user_labels.component="{alert.affected_component}"',
+                            comparison=monitoring_v3.ComparisonType.COMPARISON_GT,
+                            threshold_value=alert.baseline * 1.25,  # 25% above baseline
+                            duration={"seconds": 0},
+                            trigger={"count": 1}
+                        )
+                    )
+                    
+                    # Create the alert policy
+                    policy = monitoring_v3.AlertPolicy(
+                        display_name=display_name,
+                        conditions=[condition],
+                        combiner=monitoring_v3.AlertPolicy.ConditionCombinerType.OR,
+                        notification_channels=[],  # Add notification channels as needed
+                        documentation=documentation,
+                        user_labels={
+                            "pipeline_id": alert.affected_pipeline,
+                            "component": alert.affected_component,
+                            "severity": alert.severity.value
+                        }
+                    )
+                    
+                    # Create policy in monitoring
+                    created_policy = client.create_alert_policy(
+                        name=f"projects/{project_id}",
+                        alert_policy=policy
+                    )
+                    
+                    logging.info(f"Created alert policy: {created_policy.name}")
+                except Exception as e:
+                    logging.error(f"Failed to create alert policy: {e}")
+    
+    def export_to_bigquery(self, project_id: str, dataset_id: str) -> None:
+        """
+        Export metrics and anomalies to BigQuery for historical analysis.
+        
+        Args:
+            project_id: GCP project ID
+            dataset_id: BigQuery dataset ID
+        """
+        client = bigquery.Client(project=project_id)
+        
+        # Export metrics
+        metrics_rows = []
+        for metric in self.metrics:
+            row = {
+                "metric_name": metric.name,
+                "value": metric.value,
+                "metric_type": metric.metric_type.value,
+                "timestamp": metric.timestamp.isoformat(),
+                "description": metric.description,
+                "unit": metric.unit
+            }
+            
+            # Add labels
+            for key, value in metric.labels.items():
+                row[f"label_{key}"] = value
+                
+            metrics_rows.append(row)
+        
+        if metrics_rows:
+            # Define table reference
+            table_ref = client.dataset(dataset_id).table("pipeline_metrics")
+            
+            # Insert rows
+            errors = client.insert_rows_json(table_ref, metrics_rows)
+            if errors:
+                logging.error(f"Errors inserting metrics into BigQuery: {errors}")
+            else:
+                logging.info(f"Inserted {len(metrics_rows)} metrics into BigQuery")
+        
+        # Export anomalies
+        anomaly_rows = []
+        for anomaly in self.detect_anomalies():
+            row = {
+                "metric_name": anomaly.metric_name,
+                "timestamp": anomaly.timestamp.isoformat(),
+                "description": anomaly.description,
+                "severity": anomaly.severity.value,
+                "value": anomaly.value,
+                "baseline": anomaly.baseline,
+                "change_percentage": anomaly.change_percentage,
+                "affected_component": anomaly.affected_component,
+                "affected_pipeline": anomaly.affected_pipeline
+            }
+            anomaly_rows.append(row)
+        
+        if anomaly_rows:
+            # Define table reference
+            table_ref = client.dataset(dataset_id).table("pipeline_anomalies")
+            
+            # Insert rows
+            errors = client.insert_rows_json(table_ref, anomaly_rows)
+            if errors:
+                logging.error(f"Errors inserting anomalies into BigQuery: {errors}")
+            else:
+                logging.info(f"Inserted {len(anomaly_rows)} anomalies into BigQuery")
+    
+    def generate_report(self, output_path: str = None) -> Dict[str, Any]:
+        """
+        Generate a comprehensive report of metrics, anomalies, and correlations.
+        Optionally save visualizations to the specified output path.
+        
+        Args:
+            output_path: Optional path to save visualization files
+            
+        Returns:
+            Report dictionary with analysis results
+        """
+        # Get latest data
+        anomalies = self.detect_anomalies()
+        correlations = self.analyze_correlations()
+        alerts = self.generate_alerts()
+        
+        # Prepare report structure
+        report = {
+            "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "summary": {
+                "total_metrics": len(self.metrics),
+                "metric_types": {t.value: len([m for m in self.metrics if m.metric_type == t]) for t in MetricType},
+                "total_anomalies": len(anomalies),
+                "anomalies_by_severity": {s.value: len([a for a in anomalies if a.severity == s]) for s in AlertSeverity},
+                "total_alerts": len(alerts),
+                "alerts_by_severity": {s.value: len([a for a in alerts if a.severity == s]) for s in AlertSeverity},
+                "total_correlations": len(correlations)
+            },
+            "pipelines": {},
+            "components": {},
+            "top_anomalies": [],
+            "key_correlations": []
+        }
+        
+        # Populate pipeline metrics
+        for pipeline_id, pipeline_data in self.pipeline_metrics.items():
+            pipeline_anomalies = [a for a in anomalies if a.affected_pipeline == pipeline_id]
+            pipeline_alerts = [a for a in alerts if a.affected_pipeline == pipeline_id]
+            
+            report["pipelines"][pipeline_id] = {
+                "metrics": pipeline_data,
+                "anomaly_count": len(pipeline_anomalies),
+                "alert_count": len(pipeline_alerts),
+                "highest_severity": max([a.severity.value for a in pipeline_alerts], default="NONE")
+            }
+        
+        # Populate component metrics
+        for component, metric_names in self.component_metrics.items():
+            component_metrics = [m for m in self.metrics if m.labels.get("component") == component]
+            component_anomalies = [a for a in anomalies if a.affected_component == component]
+            component_alerts = [a for a in alerts if a.affected_component == component]
+            
+            report["components"][component] = {
+                "metric_count": len(component_metrics),
+                "anomaly_count": len(component_anomalies),
+                "alert_count": len(component_alerts),
+                "highest_severity": max([a.severity.value for a in component_alerts], default="NONE")
+            }
+        
+        # Add top anomalies
+        for anomaly in sorted(anomalies, 
+                             key=lambda a: list(reversed(SEVERITY_LEVELS)).index(a.severity.value))[:10]:
+            report["top_anomalies"].append({
+                "metric_name": anomaly.metric_name,
+                "description": anomaly.description,
+                "severity": anomaly.severity.value,
+                "affected_component": anomaly.affected_component,
+                "affected_pipeline": anomaly.affected_pipeline,
+                "timestamp": anomaly.timestamp.isoformat()
+            })
+        
+        # Add key correlations
+        for correlation in sorted(correlations, key=lambda c: abs(c.coefficient), reverse=True)[:10]:
+            report["key_correlations"].append({
+                "primary_metric": correlation.primary_metric,
+                "correlated_metrics": correlation.correlated_metrics,
+                "strength": correlation.correlation_strength,
+                "coefficient": correlation.coefficient
+            })
+        
+        # Generate visualizations if output path is provided
+        if output_path:
+            self._generate_visualizations(output_path)
+        
+        return report
+    
+    def _generate_visualizations(self, output_path: str) -> None:
+        """
+        Generate visualizations for metrics analysis.
+        
+        Args:
+            output_path: Directory path to save visualization files
+        """
+        try:
+            # Ensure output directory exists
+            os.makedirs(output_path, exist_ok=True)
+            
+            # 1. Time series of key metrics
+            key_metrics = set()
+            for anomaly in self.detect_anomalies():
+                key_metrics.add(anomaly.metric_name)
+            
+            for metric_name in list(key_metrics)[:5]:  # Limit to top 5 for clarity
+                metric_df = self.metrics_df[self.metrics_df['name'] == metric_name].copy()
+                if len(metric_df) < 2:
+                    continue
+                    
+                # Convert to datetime if needed
+                if not pd.api.types.is_datetime64_dtype(metric_df['timestamp']):
+                    metric_df['timestamp'] = pd.to_datetime(metric_df['timestamp'])
+                
+                plt.figure(figsize=(12, 6))
+                
+                # Group by pipeline if available
+                if 'label_pipeline_id' in metric_df.columns:
+                    for pipeline, group_df in metric_df.groupby('label_pipeline_id'):
+                        plt.plot(group_df['timestamp'], group_df['value'], 
+                                label=f"{pipeline}", marker='o')
+                else:
+                    plt.plot(metric_df['timestamp'], metric_df['value'], 
+                            label=metric_name, marker='o')
+                
+                plt.title(f"{metric_name} Over Time")
+                plt.xlabel("Timestamp")
+                plt.ylabel(metric_df['unit'].iloc[0] if 'unit' in metric_df else "Value")
+                plt.legend()
+                plt.grid(True)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                
+                # Save figure
+                plt.savefig(os.path.join(output_path, f"{metric_name.replace(' ', '_')}_timeseries.png"))
+                plt.close()
+            
+            # 2. Correlation heatmap
+            metrics_pivot = self.metrics_df.pivot_table(
+                index='timestamp', 
+                columns='name', 
+                values='value', 
+                aggfunc='mean'
+            )
+            
+            if len(metrics_pivot.columns) > 1:
+                corr = metrics_pivot.corr()
+                
+                plt.figure(figsize=(12, 10))
+                sns.heatmap(corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1, center=0)
+                plt.title("Metric Correlations")
+                plt.tight_layout()
+                plt.savefig(os.path.join(output_path, "correlation_heatmap.png"))
+                plt.close()
+            
+            # 3. Anomaly distribution by severity
+            anomalies = self.detect_anomalies()
+            severity_counts = {s.value: 0 for s in AlertSeverity}
+            for anomaly in anomalies:
+                severity_counts[anomaly.severity.value] += 1
+            
+            plt.figure(figsize=(10, 6))
+            bars = plt.bar(severity_counts.keys(), severity_counts.values())
+            
+            # Color bars by severity
+            colors = {'LOW': 'green', 'MEDIUM': 'yellow', 'HIGH': 'orange', 'CRITICAL': 'red'}
+            for i, bar in enumerate(bars):
+                severity = list(severity_counts.keys())[i]
+                bar.set_color(colors.get(severity, 'blue'))
+                
+            plt.title("Anomalies by Severity")
+            plt.xlabel("Severity")
+            plt.ylabel("Count")
+            plt.grid(axis='y')
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_path, "anomalies_by_severity.png"))
+            plt.close()
+            
+            # 4. Component health overview
+            component_anomalies = {}
+            for anomaly in anomalies:
+                if anomaly.affected_component not in component_anomalies:
+                    component_anomalies[anomaly.affected_component] = {s.value: 0 for s in AlertSeverity}
+                component_anomalies[anomaly.affected_component][anomaly.severity.value] += 1
+            
+            if component_anomalies:
+                components = list(component_anomalies.keys())
+                data = []
+                for severity in SEVERITY_LEVELS:
+                    data.append([component_anomalies[comp].get(severity, 0) for comp in components])
+                
+                plt.figure(figsize=(12, 8))
+                bottom = np.zeros(len(components))
+                
+                for i, severity in enumerate(SEVERITY_LEVELS):
+                    plt.bar(components, data[i], bottom=bottom, label=severity, 
+                           color=colors.get(severity, 'blue'))
+                    bottom += np.array(data[i])
+                
+                plt.title("Anomalies by Component and Severity")
+                plt.xlabel("Component")
+                plt.ylabel("Anomaly Count")
+                plt.legend()
+                plt.grid(axis='y')
+                plt.xticks(rotation=45, ha='right')
+                plt.tight_layout()
+                plt.savefig(os.path.join(output_path, "component_health.png"))
+                plt.close()
+            
+            logging.info(f"Generated visualizations in {output_path}")
+            
+        except Exception as e:
+            logging.error(f"Failed to generate visualizations: {e}")
+
+
+def process_metrics(metrics_data: Dict[str, Any], 
+                    export_to_monitoring: bool = False,
+                    export_to_bigquery: bool = False,
+                    generate_visualizations: bool = False,
+                    project_id: str = None,
+                    dataset_id: str = None,
+                    visualization_path: str = None) -> Dict[str, Any]:
+    """
+    Process metrics data to analyze and extract insights.
+    
+    Args:
+        metrics_data: Raw metrics data in the standard format
+        export_to_monitoring: Whether to export alerts to Cloud Monitoring
+        export_to_bigquery: Whether to export data to BigQuery
+        generate_visualizations: Whether to generate visualization files
+        project_id: GCP project ID (required for export options)
+        dataset_id: BigQuery dataset ID (required for BigQuery export)
+        visualization_path: Path to save visualizations (required for visualization option)
+    
+    Returns:
+        A dictionary containing the analysis results and insights
+    """
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Validate inputs
+    if export_to_monitoring or export_to_bigquery:
+        if not project_id:
+            raise ValueError("Project ID is required for cloud exports")
+        
+        if export_to_bigquery and not dataset_id:
+            raise ValueError("Dataset ID is required for BigQuery export")
+    
+    if generate_visualizations and not visualization_path:
+        raise ValueError("Visualization path is required for generating visualizations")
+    
+    # Process metrics
+    analyzer = MetricsAnalyzer(metrics_data)
+    
+    # Detect anomalies
+    anomalies = analyzer.detect_anomalies()
+    logging.info(f"Detected {len(anomalies)} anomalies")
+    
+    # Analyze correlations
+    correlations = analyzer.analyze_correlations()
+    logging.info(f"Analyzed {len(correlations)} metric correlations")
+    
+    # Generate alerts
+    alerts = analyzer.generate_alerts()
+    logging.info(f"Generated {len(alerts)} alerts")
+    
+    # Export data if requested
+    if export_to_monitoring:
+        analyzer.export_to_monitoring(project_id)
+    
+    if export_to_bigquery:
+        analyzer.export_to_bigquery(project_id, dataset_id)
+    
+    # Generate report and visualizations
+    report = analyzer.generate_report(visualization_path if generate_visualizations else None)
+    
+    return report
+
+
+def load_metrics_from_file(file_path: str) -> Dict[str, Any]:
+    """
+    Load metrics data from a JSON file.
+    
+    Args:
+        file_path: Path to the JSON metrics file
+        
+    Returns:
+        Dictionary containing the metrics data
+    """
+    try:
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Failed to load metrics from file: {e}")
+        raise
+
+
+def main(args=None):
+    """
+    Main entry point with command line argument parsing.
+    
+    Args:
+        args: Optional list of command line arguments (for testing)
+    """
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Process and analyze pipeline metrics")
+    parser.add_argument("--input", "-i", required=True, help="Input metrics JSON file")
+    parser.add_argument("--project-id", "-p", help="GCP project ID (required for cloud exports)")
+    parser.add_argument("--dataset-id", "-d", help="BigQuery dataset ID (required for BigQuery export)")
+    parser.add_argument("--export-monitoring", "-m", action="store_true", 
+                      help="Export alerts to Cloud Monitoring")
+    parser.add_argument("--export-bigquery", "-b", action="store_true",
+                      help="Export data to BigQuery")
+    parser.add_argument("--visualize", "-v", action="store_true",
+                      help="Generate visualization files")
+    parser.add_argument("--output-path", "-o", help="Path for output files and visualizations")
+    parser.add_argument("--report-file", "-r", help="Output file for JSON report")
+    
+    args = parser.parse_args(args)
+    
+    # Load metrics data
+    metrics_data = load_metrics_from_file(args.input)
+    
+    # Process metrics
+    report = process_metrics(
+        metrics_data=metrics_data,
+        export_to_monitoring=args.export_monitoring,
+        export_to_bigquery=args.export_bigquery,
+        generate_visualizations=args.visualize,
+        project_id=args.project_id,
+        dataset_id=args.dataset_id,
+        visualization_path=args.output_path
+    )
+    
+    # Output report
+    if args.report_file:
+        with open(args.report_file, 'w') as f:
+            json.dump(report, f, indent=2)
+            logging.info(f"Saved report to {args.report_file}")
+    else:
+        print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    main()
