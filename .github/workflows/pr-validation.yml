@@ -1,0 +1,298 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: 3.9
+  NODE_VERSION: 18
+  MIN_COVERAGE_BACKEND: 85
+  MIN_COVERAGE_WEB: 80
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      web: ${{ steps.filter.outputs.web }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+      airflow: ${{ steps.filter.outputs.airflow }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Filter changed files
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            {
+              "backend": ["src/backend/**/*.py", "src/backend/requirements*.txt"],
+              "web": ["src/web/**/*"],
+              "terraform": ["src/backend/terraform/**/*", "infrastructure/terraform/**/*"],
+              "airflow": ["src/backend/airflow/**/*.py"]
+            }
+
+  lint-backend:
+    name: Lint Backend
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r src/backend/requirements.txt -r src/backend/requirements-dev.txt
+      - name: Set up reviewdog
+        uses: reviewdog/action-setup@v1
+      - name: Run flake8 with reviewdog
+        uses: reviewdog/action-flake8@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          filter_mode: added
+          fail_on_error: true
+          flake8_args: --max-line-length=100 src/backend/
+      - name: Check formatting with black
+        run: black --check src/backend
+      - name: Check imports with isort
+        run: isort --check-only --profile black src/backend
+      - name: Run mypy type checking
+        run: mypy src/backend
+
+  test-backend:
+    name: Test Backend
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r src/backend/requirements.txt -r src/backend/requirements-dev.txt
+      - name: Run unit tests with coverage
+        run: pytest src/test/unit/backend --cov=src/backend --cov-report=xml --cov-report=html
+      - name: Check coverage threshold
+        run: |
+          python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); coverage = float(root.attrib['line-rate']) * 100; print(f'Coverage: {coverage:.2f}%'); exit(0 if coverage >= float('${{ env.MIN_COVERAGE_BACKEND }}') else 1)"
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage-report
+          path: htmlcov/
+
+  security-scan-backend:
+    name: Security Scan Backend
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install security tools
+        run: pip install bandit safety
+      - name: Run Bandit security scan
+        run: bandit -r src/backend -x src/backend/tests -f json -o bandit-results.json || true
+      - name: Check dependencies with Safety
+        run: safety check -r src/backend/requirements.txt --json > safety-results.json || true
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-security-reports
+          path: '*-results.json'
+      - name: Check for critical vulnerabilities
+        run: |
+          python -c "import json; bandit = json.load(open('bandit-results.json')); safety = json.load(open('safety-results.json')); critical_bandit = [issue for issue in bandit.get('results', []) if issue.get('issue_severity') == 'HIGH']; critical_safety = [vuln for vuln in safety.get('vulnerabilities', []) if vuln.get('severity') == 'Critical']; print(f'Critical Bandit issues: {len(critical_bandit)}'); print(f'Critical Safety issues: {len(critical_safety)}'); exit(1 if len(critical_bandit) > 0 or len(critical_safety) > 0 else 0)"
+
+  lint-web:
+    name: Lint Web
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Install dependencies
+        run: cd src/web && npm ci
+      - name: Run ESLint with reviewdog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          eslint_flags: src/web/src/
+          fail_on_error: true
+      - name: Check formatting with Prettier
+        run: cd src/web && npm run format
+      - name: Type check
+        run: cd src/web && npm run typecheck
+
+  test-web:
+    name: Test Web
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Install dependencies
+        run: cd src/web && npm ci
+      - name: Run unit tests with coverage
+        run: cd src/web && npm run test:coverage
+      - name: Check coverage threshold
+        run: cd src/web && npx jest --coverage --coverageThreshold='{"global":{"lines":${{ env.MIN_COVERAGE_WEB }}}}'
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-coverage-report
+          path: src/web/coverage/
+
+  security-scan-web:
+    name: Security Scan Web
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Run npm audit
+        run: cd src/web && npm audit --json > npm-audit-results.json || true
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-security-reports
+          path: npm-audit-results.json
+      - name: Check for critical vulnerabilities
+        run: cd src/web && npm audit --audit-level=high --production || (echo 'Critical vulnerabilities found in production dependencies' && exit 1)
+
+  validate-terraform:
+    name: Validate Terraform
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.terraform == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      - name: Install tflint
+        run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Terraform Format Check - Backend
+        run: terraform fmt -check -recursive src/backend/terraform
+      - name: Terraform Format Check - Infrastructure
+        run: terraform fmt -check -recursive infrastructure/terraform
+      - name: Terraform Init - Backend
+        run: cd src/backend/terraform && terraform init -backend=false
+      - name: Terraform Validate - Backend
+        run: cd src/backend/terraform && terraform validate
+      - name: Run tflint - Backend
+        run: cd src/backend/terraform && tflint --recursive
+      - name: Terraform Init - Infrastructure
+        run: cd infrastructure/terraform/vpc && terraform init -backend=false
+      - name: Terraform Validate - Infrastructure
+        run: cd infrastructure/terraform/vpc && terraform validate
+
+  validate-airflow:
+    name: Validate Airflow DAGs
+    needs: [detect-changes]
+    if: ${{ needs.detect-changes.outputs.airflow == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install apache-airflow pytest-airflow
+      - name: Validate DAG integrity
+        run: |
+          python -c "import os, sys; sys.path.append('src/backend'); from airflow.models import DagBag; dags_folder = 'src/backend/airflow/dags'; dag_bag = DagBag(dags_folder); if dag_bag.import_errors: print(f'DAG import errors: {dag_bag.import_errors}'); sys.exit(1)"
+      - name: Run Airflow specific tests
+        run: cd src/test && pytest unit/backend/airflow -v
+
+  pr-validation-summary:
+    name: PR Validation Summary
+    needs: [lint-backend, test-backend, security-scan-backend, lint-web, test-web, security-scan-web, validate-terraform, validate-airflow]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      - name: Generate validation summary
+        run: |
+          echo "## PR Validation Summary" > summary.md
+          echo "" >> summary.md
+          echo "### Backend" >> summary.md
+          echo "- Lint: ${{ needs.lint-backend.result == 'success' && '✅' || needs.lint-backend.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "- Tests: ${{ needs.test-backend.result == 'success' && '✅' || needs.test-backend.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "- Security: ${{ needs.security-scan-backend.result == 'success' && '✅' || needs.security-scan-backend.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "" >> summary.md
+          echo "### Web" >> summary.md
+          echo "- Lint: ${{ needs.lint-web.result == 'success' && '✅' || needs.lint-web.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "- Tests: ${{ needs.test-web.result == 'success' && '✅' || needs.test-web.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "- Security: ${{ needs.security-scan-web.result == 'success' && '✅' || needs.security-scan-web.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "" >> summary.md
+          echo "### Infrastructure" >> summary.md
+          echo "- Terraform: ${{ needs.validate-terraform.result == 'success' && '✅' || needs.validate-terraform.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+          echo "- Airflow DAGs: ${{ needs.validate-airflow.result == 'success' && '✅' || needs.validate-airflow.result == 'skipped' && '⏭️' || '❌' }}" >> summary.md
+      - name: Upload summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: validation-summary
+          path: summary.md
+      - name: Add PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-validation
+          path: summary.md
+      - name: Check job status
+        run: |
+          if [[ "${{ needs.lint-backend.result }}" != 'success' && "${{ needs.lint-backend.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.test-backend.result }}" != 'success' && "${{ needs.test-backend.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.security-scan-backend.result }}" != 'success' && "${{ needs.security-scan-backend.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.lint-web.result }}" != 'success' && "${{ needs.lint-web.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.test-web.result }}" != 'success' && "${{ needs.test-web.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.security-scan-web.result }}" != 'success' && "${{ needs.security-scan-web.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.validate-terraform.result }}" != 'success' && "${{ needs.validate-terraform.result }}" != 'skipped' ]] || \
+             [[ "${{ needs.validate-airflow.result }}" != 'success' && "${{ needs.validate-airflow.result }}" != 'skipped' ]]; then
+            exit 1
+          fi
