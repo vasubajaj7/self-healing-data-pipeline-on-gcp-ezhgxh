@@ -1,0 +1,207 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'LICENSE'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.9'
+  NODE_VERSION: '18'
+  ARTIFACT_REGISTRY: 'us-central1-docker.pkg.dev'
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  BACKEND_IMAGE_NAME: 'self-healing-pipeline-backend'
+  WEB_IMAGE_NAME: 'self-healing-pipeline-web'
+
+jobs:
+  lint-and-test-backend:
+    name: Lint and Test Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      
+      - name: Install dependencies
+        run: pip install -r src/backend/requirements.txt -r src/backend/requirements-dev.txt
+      
+      - name: Lint with flake8
+        run: flake8 src/backend --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Check formatting with black
+        run: black --check src/backend
+      
+      - name: Run unit tests with pytest
+        run: pytest src/test/unit/backend --cov=src/backend --cov-report=xml
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: coverage.xml
+
+  lint-and-test-web:
+    name: Lint and Test Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      
+      - name: Install dependencies
+        run: cd src/web && npm ci
+      
+      - name: Lint with ESLint
+        run: cd src/web && npm run lint
+      
+      - name: Check formatting with Prettier
+        run: cd src/web && npm run format:check
+      
+      - name: Run unit tests
+        run: cd src/web && npm test -- --coverage
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-coverage
+          path: src/web/coverage
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: pip install bandit safety
+      
+      - name: Run Bandit security scan
+        run: bandit -r src/backend -x src/backend/tests
+      
+      - name: Check dependencies with Safety
+        run: safety check -r src/backend/requirements.txt
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install npm-audit-resolver
+        run: npm install -g npm-audit-resolver
+      
+      - name: Check web dependencies
+        run: cd src/web && npm audit --production --audit-level=high
+
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+      
+      - name: Terraform Format Check
+        run: cd src/backend/terraform && terraform fmt -check
+      
+      - name: Terraform Init
+        run: cd src/backend/terraform && terraform init -backend=false
+      
+      - name: Terraform Validate
+        run: cd src/backend/terraform && terraform validate
+
+  build-backend:
+    name: Build Backend
+    needs: [lint-and-test-backend, security-scan, terraform-validate]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+      
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }}
+      
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/backend
+          push: true
+          tags: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }},${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+
+  build-web:
+    name: Build Web
+    needs: [lint-and-test-web, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+      
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }}
+      
+      - name: Build and push web image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/web
+          push: true
+          tags: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }},${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.WEB_IMAGE_NAME }}:latest
