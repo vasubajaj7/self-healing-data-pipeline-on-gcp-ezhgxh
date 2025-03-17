@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: web
+    environment: ${ENV}
+    managed-by: kustomize
+  annotations:
+    description: "Service for web UI of the self-healing data pipeline"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: self-healing-pipeline
+    component: web
+  sessionAffinity: None
