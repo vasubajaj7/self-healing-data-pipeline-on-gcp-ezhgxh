@@ -1,0 +1,229 @@
+# Configuration for local test environment of the self-healing data pipeline
+# This file defines settings for all components in the Docker-based test environment
+# Including database connections, emulated GCP services, test data paths, and service configurations
+
+# Environment information
+environment:
+  name: local-test-environment
+  description: Docker-based local test environment for the self-healing data pipeline
+  type: development
+
+# Services configuration
+services:
+  # PostgreSQL database configuration
+  database:
+    host: db
+    port: 5432
+    user: postgres
+    password: postgres
+    database: test_pipeline
+    schema: public
+    pool_size: 5
+    max_connections: 10
+    timeout_seconds: 30
+  
+  # Redis configuration
+  redis:
+    host: redis
+    port: 6379
+    db: 0
+    timeout_seconds: 5
+  
+  # BigQuery emulator configuration
+  bigquery_emulator:
+    host: bigquery-emulator
+    port: 9050
+    project_id: test-project
+    dataset: test_dataset
+    location: US
+  
+  # Cloud Storage emulator configuration
+  storage_emulator:
+    host: storage-emulator
+    port: 9023
+    project_id: test-project
+    bucket: test-bucket
+    root_path: /data
+  
+  # Pub/Sub emulator configuration
+  pubsub_emulator:
+    host: pubsub-emulator
+    port: 8085
+    project_id: test-project
+  
+  # Mock API service configuration
+  mock_api:
+    host: mock-api
+    port: 1080
+    base_path: /api/v1
+    endpoints:
+      data: /data
+      customers: /customers
+      products: /products
+    auth:
+      token: test_token
+      header: Authorization
+      prefix: Bearer
+  
+  # Airflow configuration
+  airflow:
+    host: airflow
+    port: 8080
+    webserver_url: http://airflow:8080
+    username: admin
+    password: admin
+    database:
+      host: db
+      port: 5432
+      user: postgres
+      password: postgres
+      database: test_airflow
+    dags_folder: /opt/airflow/dags
+    plugins_folder: /opt/airflow/plugins
+    config_folder: /opt/airflow/config
+
+# Test data configuration
+test_data:
+  # Paths to test data files
+  paths:
+    gcs: ../../mock_data/gcs
+    cloudsql: ../../mock_data/cloudsql
+    api: ../../mock_data/api
+    bigquery: ../../mock_data/bigquery
+    quality: ../../mock_data/quality
+    healing: ../../mock_data/healing
+    monitoring: ../../mock_data/monitoring
+  
+  # Sample files for different services
+  sample_files:
+    gcs:
+      - sample_data.csv
+      - sample_data.json
+      - sample_data.parquet
+      - sample_data.avro
+    cloudsql:
+      - sample_schema.sql
+      - sample_data.sql
+    api:
+      - sample_responses.json
+      - sample_requests.json
+    bigquery:
+      - sample_schema.json
+      - sample_data.json
+  
+  # Test data generation settings
+  generation:
+    enabled: true
+    record_count:
+      small: 100
+      medium: 1000
+      large: 10000
+    seed: 42
+    schema_path: ../../mock_data/generator/schema_generator.py
+    data_path: ../../mock_data/generator/data_generator.py
+
+# Pipeline configuration
+pipeline:
+  # Data ingestion configuration
+  ingestion:
+    batch_size: 100
+    parallel_workers: 2
+    timeout_seconds: 60
+    retry_attempts: 2
+    sources:
+      gcs:
+        enabled: true
+        polling_interval_seconds: 30
+      cloud_sql:
+        enabled: true
+        connection_pool_size: 3
+      external_api:
+        enabled: true
+        request_timeout_seconds: 10
+        rate_limit_per_minute: 30
+  
+  # Data quality configuration
+  quality:
+    validation:
+      enabled: true
+      timeout_seconds: 60
+      quality_threshold: 0.9
+      rules_path: ../../mock_data/quality/sample_expectations.json
+    issue_handling:
+      critical_threshold: 0.6
+      warning_threshold: 0.8
+      auto_fix_enabled: true
+  
+  # Self-healing configuration
+  self_healing:
+    enabled: true
+    mode: SEMI_AUTOMATIC
+    confidence_threshold: 0.8
+    max_retry_attempts: 2
+    rules_path: ../../mock_data/healing/sample_issues.json
+    model_registry:
+      path: ../../mock_data/healing/models
+      version_retention: 3
+  
+  # Monitoring configuration
+  monitoring:
+    enabled: true
+    metrics_collection_interval_seconds: 30
+    anomaly_detection:
+      enabled: true
+      sensitivity: 0.7
+    alerting:
+      enabled: true
+      notification_channels:
+        teams:
+          enabled: false
+          webhook_url: http://mock-api:1080/webhook/teams
+        email:
+          enabled: false
+          recipients:
+            - test@example.com
+          send_on_severity:
+            - CRITICAL
+            - HIGH
+  
+  # Performance optimization configuration
+  optimization:
+    enabled: true
+    query_optimization:
+      enabled: true
+      min_execution_time_seconds: 5
+    schema_optimization:
+      enabled: true
+      min_table_size_gb: 0.1
+
+# Logging configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: logs/test_pipeline.log
+  console_output: true
+
+# Testing configuration
+testing:
+  unit_test:
+    parallel_workers: 4
+    timeout_seconds: 30
+    mock_external_services: true
+  integration_test:
+    parallel_workers: 2
+    timeout_seconds: 60
+    use_emulators: true
+  performance_test:
+    enabled: true
+    load_levels:
+      low: 10
+      medium: 50
+      high: 100
+    duration_seconds: 60
+
+# Security configuration for test environment
+security:
+  mock_credentials:
+    api_key: test_api_key
+    oauth_token: test_oauth_token
+    service_account: test-service-account@test-project.iam.gserviceaccount.com
