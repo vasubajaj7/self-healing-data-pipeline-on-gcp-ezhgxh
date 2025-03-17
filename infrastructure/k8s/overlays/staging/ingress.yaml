@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: self-healing-pipeline-ingress
+  namespace: self-healing-pipeline-staging
+  annotations:
+    kubernetes.io/ingress.class: gce
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/configuration-snippet: proxy_set_header X-Environment staging;
+    nginx.ingress.kubernetes.io/cors-allow-origin: https://*.example.com
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "90"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "90"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "90"
+  labels:
+    app: self-healing-pipeline
+    environment: staging
+    component: ingress
+    tier: pre-production
+spec:
+  tls:
+    - hosts:
+        - staging-pipeline.example.com
+      secretName: pipeline-staging-tls
+  rules:
+    - host: staging-pipeline.example.com
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80
