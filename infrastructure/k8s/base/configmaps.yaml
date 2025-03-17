@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipeline-config
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: config
+    managed-by: kustomize
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  GCP_PROJECT_ID: "${GCP_PROJECT_ID}"
+  GCP_REGION: "us-central1"
+  BIGQUERY_DATASET: "self_healing_pipeline"
+  GCS_BUCKET: "${GCP_PROJECT_ID}-self-healing-pipeline"
+  COMPOSER_ENVIRONMENT: "self-healing-pipeline"
+  ENABLE_METRICS: "true"
+  ENABLE_TRACING: "true"
+  MAX_RETRY_ATTEMPTS: "3"
+  RETRY_BACKOFF_FACTOR: "2.0"
+  RETRY_INITIAL_DELAY_SECONDS: "5"
+  RETRY_MAX_DELAY_SECONDS: "60"
+  API_TIMEOUT_SECONDS: "30"
+  BATCH_SIZE: "1000"
+  PROCESSING_THREADS: "4"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quality-config
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: quality
+    managed-by: kustomize
+data:
+  VALIDATION_TIMEOUT_SECONDS: "300"
+  QUALITY_SCORE_THRESHOLD: "0.95"
+  SCHEMA_VALIDATION_ENABLED: "true"
+  CONTENT_VALIDATION_ENABLED: "true"
+  RELATIONSHIP_VALIDATION_ENABLED: "true"
+  STATISTICAL_VALIDATION_ENABLED: "true"
+  MAX_VALIDATION_THREADS: "4"
+  VALIDATION_BATCH_SIZE: "1000"
+  VALIDATION_SAMPLING_ENABLED: "true"
+  VALIDATION_SAMPLING_RATIO: "0.1"
+  VALIDATION_SAMPLING_MIN_ROWS: "1000"
+  VALIDATION_SAMPLING_MAX_ROWS: "100000"
+  GREAT_EXPECTATIONS_CONFIG_PATH: "/etc/quality-config/great_expectations.yml"
+  EXPECTATION_SUITE_PATH: "/etc/quality-config/expectation_suites"
+  VALIDATION_RESULT_PATH: "/etc/quality-config/validations"
+  VALIDATION_RESULT_STORAGE: "bigquery"
+  VALIDATION_RESULT_TABLE: "validation_results"
+  VALIDATION_RESULT_RETENTION_DAYS: "90"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healing-config
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: healing
+    managed-by: kustomize
+data:
+  HEALING_MODE: "semi-automatic"
+  CONFIDENCE_THRESHOLD: "0.85"
+  MAX_HEALING_ATTEMPTS: "3"
+  HEALING_TIMEOUT_SECONDS: "600"
+  APPROVAL_REQUIRED_THRESHOLD: "0.7"
+  LEARNING_MODE_ENABLED: "true"
+  MODEL_REGISTRY_PATH: "gs://${GCP_PROJECT_ID}-self-healing-pipeline/models"
+  MODEL_SERVING_ENDPOINT: "https://vertex.googleapis.com/v1/projects/${GCP_PROJECT_ID}/locations/us-central1/endpoints/self-healing-model"
+  PATTERN_DETECTION_THRESHOLD: "0.8"
+  ROOT_CAUSE_ANALYSIS_DEPTH: "3"
+  CORRECTION_STRATEGIES: "imputation,transformation,filtering,retry,resource-adjustment"
+  FEEDBACK_COLLECTION_ENABLED: "true"
+  FEEDBACK_STORAGE_TABLE: "healing_feedback"
+  FEEDBACK_RETENTION_DAYS: "365"
+  MODEL_RETRAINING_SCHEDULE: "weekly"
+  MODEL_EVALUATION_ENABLED: "true"
+  MODEL_PERFORMANCE_THRESHOLD: "0.8"
+  MODEL_VERSION_RETENTION_COUNT: "5"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-config
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: monitoring
+    managed-by: kustomize
+data:
+  METRICS_COLLECTION_INTERVAL_SECONDS: "60"
+  METRICS_BATCH_SIZE: "100"
+  CUSTOM_METRICS_PREFIX: "pipeline"
+  METRICS_RETENTION_DAYS: "30"
+  ENABLE_DEBUG_METRICS: "false"
+  ANOMALY_DETECTION_ENABLED: "true"
+  ANOMALY_DETECTION_INTERVAL_MINUTES: "5"
+  BASELINE_UPDATE_INTERVAL_HOURS: "24"
+  ALERTING_ENABLED: "true"
+  ALERT_EVALUATION_INTERVAL_SECONDS: "60"
+  ALERT_DEDUPLICATION_WINDOW_MINUTES: "15"
+  ALERT_CORRELATION_ENABLED: "true"
+  ALERT_GROUPING_WINDOW_MINUTES: "10"
+  DEFAULT_ALERT_SEVERITY: "MEDIUM"
+  TEAMS_NOTIFICATION_ENABLED: "true"
+  EMAIL_NOTIFICATION_ENABLED: "true"
+  NOTIFICATION_THROTTLING_ENABLED: "true"
+  MAX_NOTIFICATIONS_PER_MINUTE: "10"
+  HEALTH_CHECKS_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL_SECONDS: "60"
+  SLO_MONITORING_ENABLED: "true"
+  DASHBOARD_AUTO_CREATION_ENABLED: "true"
+  STRUCTURED_LOGGING_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  TRACING_SAMPLING_RATE: "0.1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feature-flags
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: feature-flags
+    managed-by: kustomize
+data:
+  ENABLE_AI_DRIVEN_CORRECTION: "true"
+  ENABLE_PREDICTIVE_FAILURE_DETECTION: "true"
+  ENABLE_AUTOMATED_SCHEMA_EVOLUTION: "false"
+  ENABLE_COST_OPTIMIZATION: "true"
+  ENABLE_QUERY_OPTIMIZATION: "true"
+  ENABLE_RESOURCE_OPTIMIZATION: "true"
+  ENABLE_ADVANCED_ANOMALY_DETECTION: "true"
+  ENABLE_AUTOMATED_DOCUMENTATION: "false"
+  ENABLE_DATA_LINEAGE_TRACKING: "true"
+  ENABLE_REAL_TIME_MONITORING: "true"
+  ENABLE_AUTOMATED_TESTING: "true"
+  ENABLE_PERFORMANCE_PROFILING: "true"
