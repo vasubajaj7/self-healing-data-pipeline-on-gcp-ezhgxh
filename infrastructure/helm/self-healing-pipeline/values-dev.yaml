@@ -1,0 +1,164 @@
+# Development environment values for self-healing-pipeline
+# Overrides default values with development-specific configurations
+
+global:
+  environment: development
+  project:
+    id: self-healing-pipeline-dev
+    region: us-central1
+  image:
+    tag: latest
+    pullPolicy: Always
+
+backend:
+  replicaCount: 1  # Single replica for dev environment
+  resources:
+    requests:
+      cpu: 250m     # Lower resource requirements for dev
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  autoscaling:
+    enabled: false  # Disable autoscaling in dev
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: /metrics
+    development/debug-enabled: "true"  # Enable debugging
+
+web:
+  replicaCount: 1  # Single replica for dev environment
+  resources:
+    requests:
+      cpu: 100m     # Minimal resources for UI in dev
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  autoscaling:
+    enabled: false  # Disable autoscaling in dev
+    minReplicas: 1
+    maxReplicas: 2
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: dev-pipeline.local  # Dev-specific hostname
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: backend
+          port: 8080
+  tls: []  # No TLS for dev environment
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: "30s"
+    resources:
+      requests:
+        cpu: 100m     # Lower resource requirements
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+    retention: "3d"   # Shorter retention period for dev
+    storageClass: standard
+    storageSize: 10Gi # Smaller storage size for dev
+  grafana:
+    enabled: true
+    adminPassword: dev-password  # Simple password for dev
+    dashboards:
+      enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    persistence:
+      enabled: false  # No persistence needed for dev
+  alertmanager:
+    enabled: true
+    config:
+      route:
+        group_wait: "30s"
+        group_interval: "5m"
+        repeat_interval: "12h"
+        receiver: dev-team-email  # Dev-specific receiver
+      receivers:
+        - name: dev-team-email
+          email_configs:
+            - to: dev-alerts@example.com
+              send_resolved: true
+        - name: dev-teams
+          webhook_configs:
+            - url: https://teams-webhook-dev.example.com/incoming
+              send_resolved: true
+    resources:
+      requests:
+        cpu: 25m      # Minimal resources for dev
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+
+security:
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: dev-service-account@self-healing-pipeline-dev.iam.gserviceaccount.com
+  networkPolicy:
+    enabled: false  # Disable network policies for easier dev experience
+  certManager:
+    enabled: false  # No cert-manager needed in dev
+
+config:
+  pipeline:
+    logLevel: DEBUG  # Verbose logging for development
+    enableMetrics: true
+    enableTracing: true
+    gcsBucket: self-healing-pipeline-dev-data
+    bigqueryDataset: self_healing_pipeline_dev
+  quality:
+    validationTimeoutSeconds: 300
+    qualityScoreThreshold: 80  # Lower threshold for development
+    enableAutoValidation: true
+  healing:
+    mode: semi-automatic
+    confidenceThreshold: 80  # Lower threshold for development
+    maxRetryAttempts: 3
+    approvalRequired: high-impact-only
+    learningMode: active
+  featureFlags:
+    enableExperimentalFeatures: true  # Enable experimental features in dev
+    enableDebugMode: true             # Enable debug mode in dev
+    enablePerformanceTesting: true    # Enable performance testing in dev
+    enableMockData: true              # Enable mock data for testing
+  secrets:
+    databaseCredentials:
+      create: true
+      cloudsqlUser: pipeline_dev  # Dev-specific database user
+      cloudsqlPassword: ""        # To be provided securely
+      cloudsqlConnectionName: self-healing-pipeline-dev:us-central1:pipeline-dev-db
+    apiKeys:
+      create: true
+      externalApiKey: ""  # To be provided securely
+    oauthCredentials:
+      create: true
+      clientId: ""        # To be provided securely
+      clientSecret: ""    # To be provided securely
