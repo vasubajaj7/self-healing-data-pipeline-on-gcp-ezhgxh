@@ -1,0 +1,547 @@
+# Pipeline definitions for the self-healing data pipeline
+# Version: 1.0.0
+# Last Updated: 2023-06-15
+# Description: Configuration file containing predefined data pipeline definitions
+# Owner: data_engineering_team
+
+description: "YAML structure defining pipeline configurations for the self-healing data pipeline"
+
+pipelines:
+  - pipeline_id: "pipe_gcs_customer_data"
+    name: "GCS Customer Data Ingestion"
+    description: "Ingests customer data from GCS bucket into BigQuery with data quality validation and self-healing"
+    pipeline_type: "GCS_INGESTION"
+    source_id: "sales_data_gcs"
+    target_dataset: "customer_data"
+    target_table: "customers"
+    dag_id: "gcs_customer_data_ingestion"
+    is_active: true
+    transformation_config:
+      file_pattern: "customers/*.csv"
+      file_format: "CSV"
+      delimiter: ","
+      header_rows: 1
+      skip_leading_rows: 1
+      encoding: "UTF-8"
+      transformations:
+        - column: "customer_id"
+          type: "string_transform"
+          operation: "trim"
+        - column: "email"
+          type: "string_transform"
+          operation: "lowercase"
+        - column: "registration_date"
+          type: "date_transform"
+          operation: "parse"
+          format: "%Y-%m-%d"
+    quality_config:
+      enabled: true
+      quality_threshold: 0.9
+      rule_group: "customer_data"
+      additional_rules:
+        - "rule-content-001"
+        - "rule-content-003"
+      validation_mode: "STRICT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.85
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 2 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: false
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 3600
+      retries: 3
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "HIGH"
+    performance_config:
+      batch_size: 1000
+      parallel_processing: true
+      max_parallel_workers: 5
+      bigquery_write_disposition: "WRITE_TRUNCATE"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "customer"
+        - "gcs"
+        - "daily"
+      criticality: "HIGH"
+      data_classification: "SENSITIVE"
+      documentation_url: "https://wiki.example.com/pipelines/customer_data"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_cloudsql_sales"
+    name: "Cloud SQL Sales Data Extraction"
+    description: "Extracts sales data from Cloud SQL database into BigQuery with incremental loading"
+    pipeline_type: "CLOUDSQL_EXTRACTION"
+    source_id: "customer_db"
+    target_dataset: "sales_metrics"
+    target_table: "sales"
+    dag_id: "cloudsql_sales_extraction"
+    is_active: true
+    transformation_config:
+      extraction_query: "SELECT * FROM sales WHERE sale_date >= '{{ ds }}' AND sale_date < '{{ tomorrow_ds }}'"
+      incremental_key: "sale_date"
+      incremental_type: "DATE"
+      transformations:
+        - column: "total_amount"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "discount_percent"
+          type: "numeric_transform"
+          operation: "multiply"
+          factor: 100
+    quality_config:
+      enabled: true
+      quality_threshold: 0.95
+      rule_group: "sales_metrics"
+      additional_rules:
+        - "rule-content-002"
+        - "rule-content-004"
+      validation_mode: "STRICT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.9
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 3 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: true
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 7200
+      retries: 3
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "HIGH"
+    performance_config:
+      batch_size: 5000
+      parallel_processing: true
+      max_parallel_workers: 3
+      bigquery_write_disposition: "WRITE_APPEND"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "sales"
+        - "cloudsql"
+        - "daily"
+        - "incremental"
+      criticality: "HIGH"
+      data_classification: "SENSITIVE"
+      documentation_url: "https://wiki.example.com/pipelines/sales_data"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_api_product_catalog"
+    name: "Product Catalog API Ingestion"
+    description: "Ingests product catalog data from external API into BigQuery"
+    pipeline_type: "API_INGESTION"
+    source_id: "product_api"
+    target_dataset: "product_catalog"
+    target_table: "products"
+    dag_id: "api_product_catalog_ingestion"
+    is_active: true
+    transformation_config:
+      endpoint_path: "/products"
+      method: "GET"
+      request_params:
+        limit: 100
+        include_details: true
+      response_mapping:
+        root_path: "data.products"
+        mappings:
+          product_id: "id"
+          product_name: "name"
+          description: "description"
+          category: "category.name"
+          price: "price.amount"
+          currency: "price.currency"
+          in_stock: "inventory.in_stock"
+          stock_quantity: "inventory.quantity"
+      transformations:
+        - column: "price"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "product_name"
+          type: "string_transform"
+          operation: "trim"
+    quality_config:
+      enabled: true
+      quality_threshold: 0.9
+      rule_group: "product_catalog"
+      additional_rules:
+        - "rule-schema-003"
+      validation_mode: "LENIENT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.85
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 4 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: false
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 3600
+      retries: 5
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "MEDIUM"
+    performance_config:
+      batch_size: 100
+      parallel_processing: false
+      rate_limit: 60
+      bigquery_write_disposition: "WRITE_TRUNCATE"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "product"
+        - "api"
+        - "daily"
+      criticality: "MEDIUM"
+      data_classification: "INTERNAL"
+      documentation_url: "https://wiki.example.com/pipelines/product_catalog"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_inventory_sync"
+    name: "Inventory Data Synchronization"
+    description: "Synchronizes inventory data from multiple sources into a consolidated view"
+    pipeline_type: "DATA_PROCESSING"
+    source_id: "analytics_bq"
+    target_dataset: "inventory"
+    target_table: "stock"
+    dag_id: "inventory_sync_processing"
+    is_active: true
+    transformation_config:
+      sql_query: "SELECT p.product_id, p.product_name, p.category, i.warehouse_id, i.quantity, i.last_updated FROM `product_catalog.products` p JOIN `raw_inventory.stock_levels` i ON p.product_id = i.product_id WHERE i.last_updated >= '{{ ds }}'"
+      transformations:
+        - column: "quantity"
+          type: "numeric_transform"
+          operation: "floor"
+    quality_config:
+      enabled: true
+      quality_threshold: 0.9
+      rule_group: "inventory"
+      additional_rules:
+        - "rule-content-005"
+        - "rule-content-006"
+      validation_mode: "STRICT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.85
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 */4 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: false
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 1800
+      retries: 3
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "MEDIUM"
+    performance_config:
+      bigquery_write_disposition: "WRITE_APPEND"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+      use_legacy_sql: false
+      query_timeout_seconds: 600
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "inventory"
+        - "bigquery"
+        - "hourly"
+      criticality: "MEDIUM"
+      data_classification: "INTERNAL"
+      documentation_url: "https://wiki.example.com/pipelines/inventory_sync"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_daily_sales_metrics"
+    name: "Daily Sales Metrics Calculation"
+    description: "Calculates daily sales metrics and aggregations for reporting"
+    pipeline_type: "DATA_PROCESSING"
+    source_id: "analytics_bq"
+    target_dataset: "sales_metrics"
+    target_table: "daily_sales"
+    dag_id: "daily_sales_metrics_processing"
+    is_active: true
+    transformation_config:
+      sql_query: "SELECT sale_date, COUNT(*) as transaction_count, SUM(quantity) as total_quantity, SUM(total_amount) as total_sales, AVG(total_amount) as avg_sale_value, SUM(CASE WHEN discount_percent > 0 THEN 1 ELSE 0 END) as discounted_sales_count FROM `sales_metrics.sales` WHERE sale_date = '{{ ds }}' GROUP BY sale_date"
+      transformations:
+        - column: "total_sales"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "avg_sale_value"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+    quality_config:
+      enabled: true
+      quality_threshold: 0.95
+      rule_group: "sales_metrics"
+      additional_rules:
+        - "rule-statistical-004"
+      validation_mode: "STRICT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.9
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 5 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: true
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 1800
+      retries: 3
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "HIGH"
+    performance_config:
+      bigquery_write_disposition: "WRITE_APPEND"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+      use_legacy_sql: false
+      query_timeout_seconds: 600
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "sales"
+        - "metrics"
+        - "daily"
+        - "aggregation"
+      criticality: "HIGH"
+      data_classification: "INTERNAL"
+      documentation_url: "https://wiki.example.com/pipelines/daily_sales_metrics"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_vendor_data_sftp"
+    name: "Vendor Data SFTP Ingestion"
+    description: "Ingests vendor data files from SFTP server into BigQuery"
+    pipeline_type: "SFTP_INGESTION"
+    source_id: "vendor_sftp"
+    target_dataset: "vendor_data"
+    target_table: "vendor_products"
+    dag_id: "vendor_data_sftp_ingestion"
+    is_active: true
+    transformation_config:
+      file_pattern: "vendor_products_*.csv"
+      file_format: "CSV"
+      delimiter: "|"
+      header_rows: 1
+      skip_leading_rows: 1
+      encoding: "UTF-8"
+      transformations:
+        - column: "vendor_id"
+          type: "string_transform"
+          operation: "trim"
+        - column: "product_cost"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+    quality_config:
+      enabled: true
+      quality_threshold: 0.85
+      rule_group: "product_catalog"
+      additional_rules: []
+      validation_mode: "LENIENT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.8
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: false
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 1 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: false
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 3600
+      retries: 5
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "MEDIUM"
+    performance_config:
+      batch_size: 1000
+      parallel_processing: true
+      max_parallel_workers: 3
+      bigquery_write_disposition: "WRITE_TRUNCATE"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+    metadata:
+      owner: "data_engineering_team"
+      tags:
+        - "vendor"
+        - "sftp"
+        - "daily"
+      criticality: "MEDIUM"
+      data_classification: "CONFIDENTIAL"
+      documentation_url: "https://wiki.example.com/pipelines/vendor_data"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+  - pipeline_id: "pipe_finance_daily"
+    name: "Finance Daily Data Processing"
+    description: "Processes daily financial data for reporting and analysis"
+    pipeline_type: "DATA_PROCESSING"
+    source_id: "analytics_bq"
+    target_dataset: "finance"
+    target_table: "daily_financials"
+    dag_id: "finance_daily_processing"
+    is_active: true
+    transformation_config:
+      sql_query: "SELECT s.sale_date, SUM(s.total_amount) as gross_revenue, SUM(s.total_amount * (1 - s.discount_percent/100)) as net_revenue, SUM(p.product_cost * s.quantity) as cost_of_goods, SUM(s.total_amount * (1 - s.discount_percent/100)) - SUM(p.product_cost * s.quantity) as gross_profit FROM `sales_metrics.sales` s JOIN `product_catalog.products` p ON s.product_id = p.product_id WHERE s.sale_date = '{{ ds }}' GROUP BY s.sale_date"
+      transformations:
+        - column: "gross_revenue"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "net_revenue"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "cost_of_goods"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+        - column: "gross_profit"
+          type: "numeric_transform"
+          operation: "round"
+          precision: 2
+    quality_config:
+      enabled: true
+      quality_threshold: 0.95
+      rule_group: "sales_metrics"
+      additional_rules: []
+      validation_mode: "STRICT"
+      on_failure: "SELF_HEAL"
+    self_healing_config:
+      enabled: true
+      confidence_threshold: 0.9
+      rule_set: "data_quality"
+      max_retry_attempts: 3
+      approval_required: true
+      notification_on_healing: true
+    scheduling_config:
+      schedule_interval: "0 6 * * *"
+      start_date: "2023-06-01"
+      end_date: null
+      catchup: false
+      depends_on_past: false
+      wait_for_downstream: true
+      max_active_runs: 1
+    execution_config:
+      timeout_seconds: 1800
+      retries: 3
+      retry_delay_seconds: 300
+      email_on_failure: true
+      email_on_retry: false
+      priority: "HIGH"
+    performance_config:
+      bigquery_write_disposition: "WRITE_APPEND"
+      bigquery_create_disposition: "CREATE_IF_NEEDED"
+      use_legacy_sql: false
+      query_timeout_seconds: 600
+    metadata:
+      owner: "finance_team"
+      tags:
+        - "finance"
+        - "daily"
+        - "revenue"
+        - "profit"
+      criticality: "HIGH"
+      data_classification: "CONFIDENTIAL"
+      documentation_url: "https://wiki.example.com/pipelines/finance_daily"
+    created_at: "2023-06-01T00:00:00Z"
+    updated_at: "2023-06-15T00:00:00Z"
+    created_by: "system"
+    updated_by: "system"
+
+pipeline_dependencies:
+  - pipeline_id: "pipe_daily_sales_metrics"
+    depends_on:
+      - "pipe_cloudsql_sales"
+  - pipeline_id: "pipe_finance_daily"
+    depends_on:
+      - "pipe_cloudsql_sales"
+      - "pipe_api_product_catalog"
+  - pipeline_id: "pipe_inventory_sync"
+    depends_on:
+      - "pipe_api_product_catalog"
+
+metadata:
+  version: "1.0.0"
+  last_updated: "2023-06-15T00:00:00Z"
+  description: "Pipeline definitions for the self-healing data pipeline"
+  owner: "data_engineering_team"
