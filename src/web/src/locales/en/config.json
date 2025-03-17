@@ -1,0 +1,456 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Tabs, Tab, Card, Button, Alert, Row, Col, Spinner, Modal, Container } from 'react-bootstrap';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faPlus, faEdit, faTrash, faSync, faPlay, 
+  faHistory, faDownload, faUpload, faCog, faCheck 
+} from '@fortawesome/free-solid-svg-icons';
+import { format } from 'date-fns';
+import { toast } from 'react-toastify';
+
+// Import tab components
+import DataSourcesTab from '../components/configuration/DataSourcesTab';
+import PipelineConfigurationsTab from '../components/configuration/PipelineConfigurationsTab';
+import ValidationRulesTab from '../components/configuration/ValidationRulesTab';
+import NotificationsTab from '../components/configuration/NotificationsTab';
+import SelfHealingTab from '../components/configuration/SelfHealingTab';
+
+// Import services
+import { ConfigurationService } from '../services/ConfigurationService';
+import { AuthService } from '../services/AuthService';
+
+const Configuration = () => {
+  // State management
+  const [activeTab, setActiveTab] = useState('dataSources');
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
+  const [pendingTabChange, setPendingTabChange] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Data states
+  const [dataSources, setDataSources] = useState([]);
+  const [pipelines, setPipelines] = useState([]);
+  const [validationRules, setValidationRules] = useState([]);
+  const [notificationSettings, setNotificationSettings] = useState(null);
+  const [selfHealingSettings, setSelfHealingSettings] = useState(null);
+
+  // Fetch configuration data on component mount
+  useEffect(() => {
+    fetchConfigurationData();
+  }, []);
+
+  // Fetch all configuration data
+  const fetchConfigurationData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await Promise.all([
+        fetchDataSources(),
+        fetchPipelines(),
+        fetchValidationRules(),
+        fetchNotificationSettings(),
+        fetchSelfHealingSettings()
+      ]);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Failed to load configuration data:', err);
+      setError('Failed to load configuration data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Individual data fetch functions
+  const fetchDataSources = async () => {
+    try {
+      const sources = await ConfigurationService.getDataSources();
+      setDataSources(sources);
+    } catch (err) {
+      console.error('Failed to load data sources:', err);
+      throw err;
+    }
+  };
+
+  const fetchPipelines = async () => {
+    try {
+      const pipelineData = await ConfigurationService.getPipelines();
+      setPipelines(pipelineData);
+    } catch (err) {
+      console.error('Failed to load pipelines:', err);
+      throw err;
+    }
+  };
+
+  const fetchValidationRules = async () => {
+    try {
+      const rules = await ConfigurationService.getValidationRules();
+      setValidationRules(rules);
+    } catch (err) {
+      console.error('Failed to load validation rules:', err);
+      throw err;
+    }
+  };
+
+  const fetchNotificationSettings = async () => {
+    try {
+      const settings = await ConfigurationService.getNotificationSettings();
+      setNotificationSettings(settings);
+    } catch (err) {
+      console.error('Failed to load notification settings:', err);
+      throw err;
+    }
+  };
+
+  const fetchSelfHealingSettings = async () => {
+    try {
+      const settings = await ConfigurationService.getSelfHealingSettings();
+      setSelfHealingSettings(settings);
+    } catch (err) {
+      console.error('Failed to load self-healing settings:', err);
+      throw err;
+    }
+  };
+
+  // Refresh configuration data
+  const refreshData = async () => {
+    setRefreshing(true);
+    try {
+      await fetchConfigurationData();
+      toast.success('Configuration data refreshed successfully');
+    } catch (err) {
+      toast.error('Failed to refresh configuration data');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Handle tab change with unsaved changes check
+  const handleTabChange = (tabKey) => {
+    if (hasUnsavedChanges) {
+      setPendingTabChange(tabKey);
+      setShowUnsavedChangesModal(true);
+    } else {
+      setActiveTab(tabKey);
+    }
+  };
+
+  // Handle saving data in tabs
+  const handleDataSourceSave = async (dataSource) => {
+    setLoading(true);
+    try {
+      let result;
+      if (dataSource.id) {
+        result = await ConfigurationService.updateDataSource(dataSource);
+        setDataSources(dataSources.map(ds => ds.id === dataSource.id ? result : ds));
+        toast.success('Data source updated successfully');
+      } else {
+        result = await ConfigurationService.createDataSource(dataSource);
+        setDataSources([...dataSources, result]);
+        toast.success('Data source added successfully');
+      }
+      setHasUnsavedChanges(false);
+      return result;
+    } catch (err) {
+      toast.error(`Failed to save data source: ${err.message}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePipelineSave = async (pipeline) => {
+    setLoading(true);
+    try {
+      let result;
+      if (pipeline.id) {
+        result = await ConfigurationService.updatePipeline(pipeline);
+        setPipelines(pipelines.map(p => p.id === pipeline.id ? result : p));
+        toast.success('Pipeline updated successfully');
+      } else {
+        result = await ConfigurationService.createPipeline(pipeline);
+        setPipelines([...pipelines, result]);
+        toast.success('Pipeline added successfully');
+      }
+      setHasUnsavedChanges(false);
+      return result;
+    } catch (err) {
+      toast.error(`Failed to save pipeline: ${err.message}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleValidationRuleSave = async (rule) => {
+    setLoading(true);
+    try {
+      let result;
+      if (rule.id) {
+        result = await ConfigurationService.updateValidationRule(rule);
+        setValidationRules(validationRules.map(r => r.id === rule.id ? result : r));
+        toast.success('Validation rule updated successfully');
+      } else {
+        result = await ConfigurationService.createValidationRule(rule);
+        setValidationRules([...validationRules, result]);
+        toast.success('Validation rule added successfully');
+      }
+      setHasUnsavedChanges(false);
+      return result;
+    } catch (err) {
+      toast.error(`Failed to save validation rule: ${err.message}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotificationSettingsSave = async (settings) => {
+    setLoading(true);
+    try {
+      const result = await ConfigurationService.updateNotificationSettings(settings);
+      setNotificationSettings(result);
+      toast.success('Notification settings saved successfully');
+      setHasUnsavedChanges(false);
+      return result;
+    } catch (err) {
+      toast.error(`Failed to save notification settings: ${err.message}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelfHealingSettingsSave = async (settings) => {
+    setLoading(true);
+    try {
+      const result = await ConfigurationService.updateSelfHealingSettings(settings);
+      setSelfHealingSettings(result);
+      toast.success('Self-healing settings saved successfully');
+      setHasUnsavedChanges(false);
+      return result;
+    } catch (err) {
+      toast.error(`Failed to save self-healing settings: ${err.message}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle delete operations
+  const handleDataSourceDelete = async (id) => {
+    try {
+      await ConfigurationService.deleteDataSource(id);
+      setDataSources(dataSources.filter(ds => ds.id !== id));
+      toast.success('Data source deleted successfully');
+    } catch (err) {
+      toast.error(`Failed to delete data source: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const handlePipelineDelete = async (id) => {
+    try {
+      await ConfigurationService.deletePipeline(id);
+      setPipelines(pipelines.filter(p => p.id !== id));
+      toast.success('Pipeline deleted successfully');
+    } catch (err) {
+      toast.error(`Failed to delete pipeline: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const handleValidationRuleDelete = async (id) => {
+    try {
+      await ConfigurationService.deleteValidationRule(id);
+      setValidationRules(validationRules.filter(r => r.id !== id));
+      toast.success('Validation rule deleted successfully');
+    } catch (err) {
+      toast.error(`Failed to delete validation rule: ${err.message}`);
+      throw err;
+    }
+  };
+
+  // Other handlers
+  const handleTestConnection = async (dataSource) => {
+    try {
+      await ConfigurationService.testDataSourceConnection(dataSource);
+      toast.success('Connection test successful');
+      return true;
+    } catch (err) {
+      toast.error(`Connection test failed: ${err.message}`);
+      return false;
+    }
+  };
+
+  const handleRunPipeline = async (id) => {
+    try {
+      await ConfigurationService.runPipeline(id);
+      toast.success('Pipeline started successfully');
+    } catch (err) {
+      toast.error(`Failed to start pipeline: ${err.message}`);
+    }
+  };
+
+  const handleImportRules = async (file) => {
+    try {
+      const result = await ConfigurationService.importValidationRules(file);
+      setValidationRules([...validationRules, ...result]);
+      toast.success('Rules imported successfully');
+    } catch (err) {
+      toast.error(`Failed to import rules: ${err.message}`);
+    }
+  };
+
+  const handleExportRules = async () => {
+    try {
+      await ConfigurationService.exportValidationRules(validationRules);
+      toast.success('Rules exported successfully');
+    } catch (err) {
+      toast.error(`Failed to export rules: ${err.message}`);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await ConfigurationService.sendTestNotification(notificationSettings);
+      toast.success('Test notification sent successfully');
+    } catch (err) {
+      toast.error(`Failed to send test notification: ${err.message}`);
+    }
+  };
+
+  // Handle unsaved changes
+  const handleUnsavedChangesModalConfirm = () => {
+    setShowUnsavedChangesModal(false);
+    setHasUnsavedChanges(false);
+    if (pendingTabChange) {
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+    }
+  };
+
+  const handleUnsavedChangesModalCancel = () => {
+    setShowUnsavedChangesModal(false);
+    setPendingTabChange(null);
+  };
+
+  // Change tracker for form components
+  const onFormChange = useCallback(() => {
+    setHasUnsavedChanges(true);
+  }, []);
+
+  return (
+    <Container fluid className="configuration-page">
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h2>Configuration</h2>
+              <p className="text-muted">Manage data sources, pipeline configurations, validation rules, and notification settings</p>
+            </div>
+            <div>
+              <Button 
+                variant="outline-secondary" 
+                onClick={refreshData} 
+                disabled={refreshing || loading}
+              >
+                {refreshing ? <Spinner animation="border" size="sm" /> : <FontAwesomeIcon icon={faSync} />} Refresh Configuration
+              </Button>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {error && (
+            <Alert variant="danger" onClose={() => setError(null)} dismissible>
+              {error}
+            </Alert>
+          )}
+          
+          <p className="text-muted small">
+            Last updated: {format(lastUpdated, 'PPpp')}
+          </p>
+
+          <Tabs 
+            activeKey={activeTab} 
+            onSelect={handleTabChange} 
+            id="configuration-tabs" 
+            className="mb-4"
+          >
+            <Tab eventKey="dataSources" title={<span><FontAwesomeIcon icon={faCog} /> Data Sources</span>}>
+              <DataSourcesTab 
+                dataSources={dataSources}
+                loading={loading}
+                onSave={handleDataSourceSave}
+                onDelete={handleDataSourceDelete}
+                onTestConnection={handleTestConnection}
+                onChange={onFormChange}
+              />
+            </Tab>
+            <Tab eventKey="pipelineConfigurations" title={<span><FontAwesomeIcon icon={faCog} /> Pipeline Configurations</span>}>
+              <PipelineConfigurationsTab 
+                pipelines={pipelines}
+                dataSources={dataSources}
+                loading={loading}
+                onSave={handlePipelineSave}
+                onDelete={handlePipelineDelete}
+                onRun={handleRunPipeline}
+                onChange={onFormChange}
+              />
+            </Tab>
+            <Tab eventKey="validationRules" title={<span><FontAwesomeIcon icon={faCog} /> Validation Rules</span>}>
+              <ValidationRulesTab 
+                validationRules={validationRules}
+                loading={loading}
+                onSave={handleValidationRuleSave}
+                onDelete={handleValidationRuleDelete}
+                onImport={handleImportRules}
+                onExport={handleExportRules}
+                onChange={onFormChange}
+              />
+            </Tab>
+            <Tab eventKey="notifications" title={<span><FontAwesomeIcon icon={faCog} /> Notifications</span>}>
+              <NotificationsTab 
+                settings={notificationSettings}
+                loading={loading}
+                onSave={handleNotificationSettingsSave}
+                onTestNotification={handleTestNotification}
+                onChange={onFormChange}
+              />
+            </Tab>
+            <Tab eventKey="selfHealing" title={<span><FontAwesomeIcon icon={faCog} /> Self-Healing</span>}>
+              <SelfHealingTab 
+                settings={selfHealingSettings}
+                loading={loading}
+                onSave={handleSelfHealingSettingsSave}
+                onChange={onFormChange}
+              />
+            </Tab>
+          </Tabs>
+        </Card.Body>
+      </Card>
+
+      {/* Unsaved Changes Modal */}
+      <Modal show={showUnsavedChangesModal} onHide={handleUnsavedChangesModalCancel}>
+        <Modal.Header closeButton>
+          <Modal.Title>Unsaved Changes</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleUnsavedChangesModalCancel}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleUnsavedChangesModalConfirm}>
+            Discard Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </Container>
+  );
+};
+
+export default Configuration;
