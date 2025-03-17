@@ -1,0 +1,1316 @@
+{
+  "base_success_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z"
+  },
+  
+  "base_error_response": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "GENERIC_ERROR",
+      "message": "An error occurred processing your request"
+    }
+  },
+  
+  "source_system_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "source_id": "src_001",
+      "source_name": "Sales Data GCS",
+      "source_type": "GCS",
+      "connection_details": {
+        "bucket_name": "sales-data-bucket",
+        "prefix": "daily/",
+        "file_format": "CSV"
+      },
+      "schema_version": "1.2",
+      "created_at": "2023-06-10T08:15:30.000Z",
+      "updated_at": "2023-07-12T11:42:18.000Z",
+      "last_successful_extraction": "2023-07-15T02:30:00.000Z",
+      "status": "ACTIVE"
+    }
+  },
+  
+  "source_system_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "source_id": "src_001",
+          "source_name": "Sales Data GCS",
+          "source_type": "GCS",
+          "schema_version": "1.2",
+          "last_successful_extraction": "2023-07-15T02:30:00.000Z",
+          "status": "ACTIVE"
+        },
+        {
+          "source_id": "src_002",
+          "source_name": "Customer Database",
+          "source_type": "CloudSQL",
+          "schema_version": "2.1",
+          "last_successful_extraction": "2023-07-15T01:15:22.000Z",
+          "status": "ACTIVE"
+        },
+        {
+          "source_id": "src_003",
+          "source_name": "Product API",
+          "source_type": "REST API",
+          "schema_version": "1.0",
+          "last_successful_extraction": "2023-07-15T00:45:10.000Z",
+          "status": "WARNING"
+        }
+      ],
+      "pagination": {
+        "total_items": 12,
+        "total_pages": 4,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "source_system_test_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "source_id": "src_001",
+      "connection_status": "SUCCESS",
+      "connection_details": {
+        "latency_ms": 235,
+        "availability": true,
+        "authentication": "SUCCESS",
+        "authorization": "SUCCESS"
+      },
+      "metadata": {
+        "detected_schema": {
+          "fields": [
+            {"name": "order_id", "type": "STRING"},
+            {"name": "customer_id", "type": "STRING"},
+            {"name": "order_date", "type": "TIMESTAMP"},
+            {"name": "total_amount", "type": "FLOAT"},
+            {"name": "status", "type": "STRING"}
+          ]
+        },
+        "sample_count": 10,
+        "estimated_row_count": 15243
+      }
+    }
+  },
+  
+  "pipeline_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "pipeline_id": "pipe_001",
+      "pipeline_name": "Daily Sales ETL",
+      "source_id": "src_001",
+      "target_dataset": "sales_analytics",
+      "target_table": "daily_sales",
+      "dag_id": "sales_daily_etl",
+      "schedule": "0 2 * * *",
+      "description": "Daily sales data processing pipeline",
+      "created_at": "2023-06-10T09:20:15.000Z",
+      "updated_at": "2023-07-05T14:30:22.000Z",
+      "status": "ACTIVE",
+      "owner": "data_engineering",
+      "tags": ["sales", "daily", "critical"],
+      "configuration": {
+        "retries": 3,
+        "retry_delay_seconds": 300,
+        "timeout_seconds": 3600,
+        "priority": "HIGH"
+      }
+    }
+  },
+  
+  "pipeline_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "pipeline_id": "pipe_001",
+          "pipeline_name": "Daily Sales ETL",
+          "source_id": "src_001",
+          "target_dataset": "sales_analytics",
+          "target_table": "daily_sales",
+          "dag_id": "sales_daily_etl",
+          "schedule": "0 2 * * *",
+          "status": "ACTIVE"
+        },
+        {
+          "pipeline_id": "pipe_002",
+          "pipeline_name": "Customer Data Sync",
+          "source_id": "src_002",
+          "target_dataset": "customer_analytics",
+          "target_table": "customer_profile",
+          "dag_id": "customer_sync",
+          "schedule": "0 1 * * *",
+          "status": "ACTIVE"
+        },
+        {
+          "pipeline_id": "pipe_003",
+          "pipeline_name": "Product Catalog Update",
+          "source_id": "src_003",
+          "target_dataset": "product_analytics",
+          "target_table": "product_catalog",
+          "dag_id": "product_update",
+          "schedule": "0 0 * * *",
+          "status": "WARNING"
+        }
+      ],
+      "pagination": {
+        "total_items": 15,
+        "total_pages": 5,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "pipeline_execution_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "execution_id": "exec_12345",
+      "pipeline_id": "pipe_001",
+      "dag_run_id": "sales_daily_etl_20230715T020000",
+      "start_time": "2023-07-15T02:00:00.000Z",
+      "end_time": "2023-07-15T02:28:45.000Z",
+      "status": "SUCCESS",
+      "records_processed": 124532,
+      "bytes_processed": 267389445,
+      "execution_metrics": {
+        "cpu_usage_avg": 65.2,
+        "memory_usage_avg": 4.2,
+        "execution_time_seconds": 1725
+      },
+      "tasks": {
+        "total": 5,
+        "succeeded": 5,
+        "failed": 0,
+        "retried": 1
+      },
+      "error_details": null
+    }
+  },
+  
+  "pipeline_execution_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "execution_id": "exec_12345",
+          "pipeline_id": "pipe_001",
+          "dag_run_id": "sales_daily_etl_20230715T020000",
+          "start_time": "2023-07-15T02:00:00.000Z",
+          "end_time": "2023-07-15T02:28:45.000Z",
+          "status": "SUCCESS",
+          "records_processed": 124532
+        },
+        {
+          "execution_id": "exec_12344",
+          "pipeline_id": "pipe_001",
+          "dag_run_id": "sales_daily_etl_20230714T020000",
+          "start_time": "2023-07-14T02:00:00.000Z",
+          "end_time": "2023-07-14T02:25:12.000Z",
+          "status": "SUCCESS",
+          "records_processed": 118945
+        },
+        {
+          "execution_id": "exec_12343",
+          "pipeline_id": "pipe_001",
+          "dag_run_id": "sales_daily_etl_20230713T020000",
+          "start_time": "2023-07-13T02:00:00.000Z",
+          "end_time": "2023-07-13T02:31:05.000Z",
+          "status": "SUCCESS",
+          "records_processed": 121234
+        }
+      ],
+      "pagination": {
+        "total_items": 45,
+        "total_pages": 15,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "task_execution_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "task_execution_id": "task_34567",
+      "execution_id": "exec_12345",
+      "task_id": "extract_sales_data",
+      "task_type": "ExtractGCSData",
+      "start_time": "2023-07-15T02:00:10.000Z",
+      "end_time": "2023-07-15T02:05:45.000Z",
+      "status": "SUCCESS",
+      "metrics": {
+        "records_processed": 124532,
+        "bytes_processed": 267389445,
+        "processing_time_ms": 335000
+      },
+      "inputs": {
+        "bucket": "sales-data-bucket",
+        "prefix": "daily/2023/07/14/"
+      },
+      "outputs": {
+        "files_processed": 5,
+        "output_location": "gs://pipeline-staging/sales/20230715/"
+      },
+      "logs": "gs://pipeline-logs/exec_12345/extract_sales_data.log"
+    }
+  },
+  
+  "task_execution_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "task_execution_id": "task_34567",
+          "execution_id": "exec_12345",
+          "task_id": "extract_sales_data",
+          "task_type": "ExtractGCSData",
+          "start_time": "2023-07-15T02:00:10.000Z",
+          "end_time": "2023-07-15T02:05:45.000Z",
+          "status": "SUCCESS"
+        },
+        {
+          "task_execution_id": "task_34568",
+          "execution_id": "exec_12345",
+          "task_id": "transform_sales_data",
+          "task_type": "DataflowTransform",
+          "start_time": "2023-07-15T02:05:50.000Z",
+          "end_time": "2023-07-15T02:18:32.000Z",
+          "status": "SUCCESS"
+        },
+        {
+          "task_execution_id": "task_34569",
+          "execution_id": "exec_12345",
+          "task_id": "validate_sales_data",
+          "task_type": "DataQualityCheck",
+          "start_time": "2023-07-15T02:18:40.000Z",
+          "end_time": "2023-07-15T02:22:15.000Z",
+          "status": "SUCCESS"
+        }
+      ],
+      "pagination": {
+        "total_items": 5,
+        "total_pages": 2,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "quality_rule_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "rule_id": "rule_001",
+      "rule_name": "Non-null Order IDs",
+      "target_dataset": "sales_analytics",
+      "target_table": "daily_sales",
+      "rule_type": "null_check",
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "description": "Ensures order_id column contains no null values",
+      "severity": "CRITICAL",
+      "rule_definition": {
+        "column": "order_id",
+        "condition": "NOT_NULL",
+        "threshold": 1.0
+      },
+      "created_at": "2023-06-10T09:25:15.000Z",
+      "updated_at": "2023-06-10T09:25:15.000Z",
+      "status": "ACTIVE",
+      "owner": "data_quality"
+    }
+  },
+  
+  "quality_rule_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "rule_id": "rule_001",
+          "rule_name": "Non-null Order IDs",
+          "target_dataset": "sales_analytics",
+          "target_table": "daily_sales",
+          "rule_type": "null_check",
+          "severity": "CRITICAL",
+          "status": "ACTIVE"
+        },
+        {
+          "rule_id": "rule_002",
+          "rule_name": "Valid Order Amounts",
+          "target_dataset": "sales_analytics",
+          "target_table": "daily_sales",
+          "rule_type": "range_check",
+          "severity": "HIGH",
+          "status": "ACTIVE"
+        },
+        {
+          "rule_id": "rule_003",
+          "rule_name": "Order Date Format",
+          "target_dataset": "sales_analytics",
+          "target_table": "daily_sales",
+          "rule_type": "format_check",
+          "severity": "MEDIUM",
+          "status": "ACTIVE"
+        }
+      ],
+      "pagination": {
+        "total_items": 25,
+        "total_pages": 9,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "quality_validation_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "validation_id": "val_56789",
+      "execution_id": "exec_12345",
+      "rule_id": "rule_001",
+      "validation_time": "2023-07-15T02:20:15.000Z",
+      "passed": true,
+      "metrics": {
+        "total_records": 124532,
+        "passed_records": 124532,
+        "failed_records": 0,
+        "pass_percentage": 100.0,
+        "execution_time_ms": 12453
+      },
+      "details": {
+        "column": "order_id",
+        "condition": "NOT_NULL",
+        "expected": "No null values",
+        "actual": "No null values found"
+      },
+      "sample_failures": []
+    }
+  },
+  
+  "quality_validation_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "validation_id": "val_56789",
+          "execution_id": "exec_12345",
+          "rule_id": "rule_001",
+          "validation_time": "2023-07-15T02:20:15.000Z",
+          "passed": true,
+          "pass_percentage": 100.0
+        },
+        {
+          "validation_id": "val_56790",
+          "execution_id": "exec_12345",
+          "rule_id": "rule_002",
+          "validation_time": "2023-07-15T02:20:45.000Z",
+          "passed": true,
+          "pass_percentage": 99.98
+        },
+        {
+          "validation_id": "val_56791",
+          "execution_id": "exec_12345",
+          "rule_id": "rule_003",
+          "validation_time": "2023-07-15T02:21:10.000Z",
+          "passed": true,
+          "pass_percentage": 100.0
+        }
+      ],
+      "pagination": {
+        "total_items": 12,
+        "total_pages": 4,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "quality_score_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "execution_id": "exec_12345",
+      "dataset": "sales_analytics",
+      "table": "daily_sales",
+      "validation_time": "2023-07-15T02:22:00.000Z",
+      "overall_score": 99.99,
+      "grading": "A+",
+      "dimension_scores": {
+        "completeness": 100.0,
+        "accuracy": 99.98,
+        "consistency": 100.0,
+        "timeliness": 100.0
+      },
+      "rules_summary": {
+        "total": 12,
+        "passed": 12,
+        "failed": 0,
+        "warning": 0
+      },
+      "trend": {
+        "previous_score": 99.95,
+        "change": 0.04,
+        "trend": "IMPROVING"
+      }
+    }
+  },
+  
+  "issue_pattern_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "pattern_id": "pattern_001",
+      "issue_type": "DATA_QUALITY",
+      "pattern_name": "Null Values in Required Fields",
+      "description": "Detects patterns of null values in fields marked as required",
+      "detection_pattern": {
+        "rule_type": "null_check",
+        "severity": ["CRITICAL", "HIGH"],
+        "failure_count_threshold": 10,
+        "detection_algorithm": "simple_threshold"
+      },
+      "confidence_threshold": 0.85,
+      "created_at": "2023-06-15T10:30:00.000Z",
+      "updated_at": "2023-06-15T10:30:00.000Z",
+      "success_rate": 0.92,
+      "last_triggered": "2023-07-14T03:15:30.000Z",
+      "status": "ACTIVE"
+    }
+  },
+  
+  "issue_pattern_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "pattern_id": "pattern_001",
+          "issue_type": "DATA_QUALITY",
+          "pattern_name": "Null Values in Required Fields",
+          "confidence_threshold": 0.85,
+          "success_rate": 0.92,
+          "status": "ACTIVE"
+        },
+        {
+          "pattern_id": "pattern_002",
+          "issue_type": "DATA_QUALITY",
+          "pattern_name": "Out of Range Numeric Values",
+          "confidence_threshold": 0.80,
+          "success_rate": 0.88,
+          "status": "ACTIVE"
+        },
+        {
+          "pattern_id": "pattern_003",
+          "issue_type": "PIPELINE_FAILURE",
+          "pattern_name": "BigQuery Quota Exceeded",
+          "confidence_threshold": 0.90,
+          "success_rate": 0.95,
+          "status": "ACTIVE"
+        }
+      ],
+      "pagination": {
+        "total_items": 18,
+        "total_pages": 6,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "healing_action_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "action_id": "action_001",
+      "pattern_id": "pattern_001",
+      "action_type": "DATA_IMPUTATION",
+      "action_name": "Mean Value Imputation",
+      "description": "Replace null values with mean of the column",
+      "action_definition": {
+        "imputation_strategy": "MEAN",
+        "fallback_strategy": "ZERO",
+        "apply_to_columns": ["numeric_fields"],
+        "exclude_columns": ["id_fields", "timestamp_fields"]
+      },
+      "created_at": "2023-06-15T10:35:00.000Z",
+      "updated_at": "2023-06-15T10:35:00.000Z",
+      "success_rate": 0.92,
+      "last_executed": "2023-07-14T03:16:45.000Z",
+      "status": "ACTIVE"
+    }
+  },
+  
+  "healing_action_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "action_id": "action_001",
+          "pattern_id": "pattern_001",
+          "action_type": "DATA_IMPUTATION",
+          "action_name": "Mean Value Imputation",
+          "success_rate": 0.92,
+          "status": "ACTIVE"
+        },
+        {
+          "action_id": "action_002",
+          "pattern_id": "pattern_002",
+          "action_type": "DATA_FILTERING",
+          "action_name": "Outlier Removal",
+          "success_rate": 0.88,
+          "status": "ACTIVE"
+        },
+        {
+          "action_id": "action_003",
+          "pattern_id": "pattern_003",
+          "action_type": "RESOURCE_ADJUSTMENT",
+          "action_name": "BigQuery Slot Increase",
+          "success_rate": 0.95,
+          "status": "ACTIVE"
+        }
+      ],
+      "pagination": {
+        "total_items": 22,
+        "total_pages": 8,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "healing_execution_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "healing_id": "heal_12345",
+      "execution_id": "exec_12346",
+      "validation_id": "val_56792",
+      "pattern_id": "pattern_001",
+      "action_id": "action_001",
+      "execution_time": "2023-07-15T03:16:45.000Z",
+      "successful": true,
+      "confidence_score": 0.92,
+      "execution_metrics": {
+        "records_affected": 213,
+        "execution_time_ms": 8543,
+        "cpu_usage_percent": 45.2,
+        "memory_usage_mb": 512
+      },
+      "before_state": {
+        "null_count": 213,
+        "null_percentage": 0.17
+      },
+      "after_state": {
+        "null_count": 0,
+        "null_percentage": 0.0
+      },
+      "details": "Replaced null values in total_amount column with mean value 245.32"
+    }
+  },
+  
+  "healing_execution_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "healing_id": "heal_12345",
+          "execution_id": "exec_12346",
+          "pattern_id": "pattern_001",
+          "action_id": "action_001",
+          "execution_time": "2023-07-15T03:16:45.000Z",
+          "successful": true,
+          "confidence_score": 0.92
+        },
+        {
+          "healing_id": "heal_12344",
+          "execution_id": "exec_12345",
+          "pattern_id": "pattern_002",
+          "action_id": "action_002",
+          "execution_time": "2023-07-14T04:22:30.000Z",
+          "successful": true,
+          "confidence_score": 0.88
+        },
+        {
+          "healing_id": "heal_12343",
+          "execution_id": "exec_12344",
+          "pattern_id": "pattern_003",
+          "action_id": "action_003",
+          "execution_time": "2023-07-13T03:45:12.000Z",
+          "successful": true,
+          "confidence_score": 0.95
+        }
+      ],
+      "pagination": {
+        "total_items": 35,
+        "total_pages": 12,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "healing_config_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "config_id": "healing_config",
+      "autonomous_mode": "SEMI_AUTOMATIC",
+      "confidence_threshold": 0.85,
+      "max_retry_attempts": 3,
+      "approval_required": "HIGH_IMPACT_ONLY",
+      "learning_mode": "ACTIVE",
+      "healing_window": {
+        "start_time": "00:00:00",
+        "end_time": "23:59:59",
+        "days": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+      },
+      "exclusions": {
+        "pipelines": [],
+        "tables": ["audit_logs", "financial_summaries"],
+        "columns": ["user_id", "account_number", "credit_card"]
+      },
+      "created_at": "2023-06-01T10:00:00.000Z",
+      "updated_at": "2023-07-01T15:30:00.000Z",
+      "updated_by": "admin"
+    }
+  },
+  
+  "manual_healing_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "request_id": "manual_heal_56789",
+      "execution_id": "exec_12346",
+      "action_id": "action_001",
+      "initiated_at": "2023-07-15T15:30:45.000Z",
+      "status": "INITIATED",
+      "estimated_completion_time": "2023-07-15T15:35:00.000Z",
+      "tracking_url": "/api/v1/healing/manual/manual_heal_56789"
+    }
+  },
+  
+  "alert_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "alert_id": "alert_45678",
+      "execution_id": "exec_12346",
+      "alert_type": "DATA_QUALITY",
+      "severity": "HIGH",
+      "title": "Data Quality Rule Failure - Non-null Order IDs",
+      "description": "213 records found with null order_id values",
+      "created_at": "2023-07-15T03:10:30.000Z",
+      "self_healing_status": "SUCCESS",
+      "healing_id": "heal_12345",
+      "acknowledged": true,
+      "acknowledged_by": "data_engineer",
+      "acknowledged_at": "2023-07-15T08:15:22.000Z",
+      "resolution_status": "RESOLVED",
+      "resolution_details": "Null values imputed with appropriate identifiers",
+      "affected_components": [
+        "sales_analytics.daily_sales"
+      ],
+      "tags": [
+        "data_quality",
+        "null_values",
+        "auto_healed"
+      ]
+    }
+  },
+  
+  "alert_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "alert_id": "alert_45678",
+          "execution_id": "exec_12346",
+          "alert_type": "DATA_QUALITY",
+          "severity": "HIGH",
+          "title": "Data Quality Rule Failure - Non-null Order IDs",
+          "created_at": "2023-07-15T03:10:30.000Z",
+          "self_healing_status": "SUCCESS",
+          "acknowledged": true,
+          "resolution_status": "RESOLVED"
+        },
+        {
+          "alert_id": "alert_45677",
+          "execution_id": "exec_12345",
+          "alert_type": "PERFORMANCE",
+          "severity": "MEDIUM",
+          "title": "Query Performance Degradation",
+          "created_at": "2023-07-14T04:25:15.000Z",
+          "self_healing_status": "SUCCESS",
+          "acknowledged": true,
+          "resolution_status": "RESOLVED"
+        },
+        {
+          "alert_id": "alert_45676",
+          "execution_id": "exec_12344",
+          "alert_type": "RESOURCE",
+          "severity": "HIGH",
+          "title": "BigQuery Slots Exhausted",
+          "created_at": "2023-07-13T03:40:10.000Z",
+          "self_healing_status": "SUCCESS",
+          "acknowledged": true,
+          "resolution_status": "RESOLVED"
+        }
+      ],
+      "pagination": {
+        "total_items": 42,
+        "total_pages": 14,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "alert_config_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "config_id": "alert_config",
+      "notification_channels": {
+        "teams": {
+          "enabled": true,
+          "webhook_url": "https://teams.microsoft.com/webhook/...",
+          "severity_filter": ["CRITICAL", "HIGH", "MEDIUM"]
+        },
+        "email": {
+          "enabled": true,
+          "recipients": ["data-engineering@example.com", "operations@example.com"],
+          "severity_filter": ["CRITICAL", "HIGH"]
+        },
+        "sms": {
+          "enabled": false,
+          "phone_numbers": [],
+          "severity_filter": ["CRITICAL"]
+        }
+      },
+      "alert_rules": {
+        "data_quality": {
+          "enabled": true,
+          "threshold": 0.95,
+          "min_records": 10
+        },
+        "performance": {
+          "enabled": true,
+          "deviation_threshold": 0.5,
+          "min_runtime_seconds": 300
+        },
+        "resource": {
+          "enabled": true,
+          "utilization_threshold": 0.85
+        }
+      },
+      "quiet_hours": {
+        "enabled": true,
+        "start_time": "23:00:00",
+        "end_time": "07:00:00",
+        "days": ["SATURDAY", "SUNDAY"],
+        "override_severity": ["CRITICAL"]
+      },
+      "created_at": "2023-06-01T10:00:00.000Z",
+      "updated_at": "2023-07-01T15:30:00.000Z",
+      "updated_by": "admin"
+    }
+  },
+  
+  "alert_acknowledge_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "alert_id": "alert_45678",
+      "acknowledged": true,
+      "acknowledged_by": "data_engineer",
+      "acknowledged_at": "2023-07-15T14:22:34.123Z",
+      "notes": "Issue resolved through self-healing"
+    }
+  },
+  
+  "pipeline_metric_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "metric_id": "metric_78901",
+      "execution_id": "exec_12345",
+      "metric_category": "PERFORMANCE",
+      "metric_name": "execution_time_seconds",
+      "metric_value": 1725.5,
+      "collection_time": "2023-07-15T02:30:00.000Z",
+      "metadata": {
+        "pipeline_id": "pipe_001",
+        "dag_id": "sales_daily_etl",
+        "execution_date": "2023-07-15"
+      },
+      "dimensions": {
+        "environment": "production",
+        "region": "us-central1",
+        "data_volume": "124532 records"
+      },
+      "baseline": {
+        "mean": 1650.2,
+        "median": 1645.0,
+        "p90": 1820.0,
+        "min": 1590.0,
+        "max": 1950.0
+      },
+      "trend": {
+        "change_from_baseline": 75.3,
+        "change_percent": 4.56,
+        "change_assessment": "NORMAL"
+      }
+    }
+  },
+  
+  "pipeline_metric_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "metric_id": "metric_78901",
+          "execution_id": "exec_12345",
+          "metric_category": "PERFORMANCE",
+          "metric_name": "execution_time_seconds",
+          "metric_value": 1725.5,
+          "collection_time": "2023-07-15T02:30:00.000Z"
+        },
+        {
+          "metric_id": "metric_78902",
+          "execution_id": "exec_12345",
+          "metric_category": "PERFORMANCE",
+          "metric_name": "cpu_usage_avg",
+          "metric_value": 65.2,
+          "collection_time": "2023-07-15T02:30:00.000Z"
+        },
+        {
+          "metric_id": "metric_78903",
+          "execution_id": "exec_12345",
+          "metric_category": "PERFORMANCE",
+          "metric_name": "memory_usage_avg",
+          "metric_value": 4.2,
+          "collection_time": "2023-07-15T02:30:00.000Z"
+        }
+      ],
+      "pagination": {
+        "total_items": 25,
+        "total_pages": 9,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "metric_time_series_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "metric_name": "execution_time_seconds",
+      "pipeline_id": "pipe_001",
+      "time_range": {
+        "start": "2023-07-01T00:00:00.000Z",
+        "end": "2023-07-15T23:59:59.999Z"
+      },
+      "granularity": "DAY",
+      "series": [
+        {
+          "timestamp": "2023-07-01T00:00:00.000Z",
+          "value": 1645.2
+        },
+        {
+          "timestamp": "2023-07-02T00:00:00.000Z",
+          "value": 1650.5
+        },
+        {
+          "timestamp": "2023-07-03T00:00:00.000Z",
+          "value": 1630.8
+        },
+        {
+          "timestamp": "2023-07-04T00:00:00.000Z",
+          "value": 1620.3
+        },
+        {
+          "timestamp": "2023-07-05T00:00:00.000Z",
+          "value": 1635.7
+        },
+        {
+          "timestamp": "2023-07-06T00:00:00.000Z",
+          "value": 1642.1
+        },
+        {
+          "timestamp": "2023-07-07T00:00:00.000Z",
+          "value": 1658.3
+        },
+        {
+          "timestamp": "2023-07-08T00:00:00.000Z",
+          "value": 1665.9
+        },
+        {
+          "timestamp": "2023-07-09T00:00:00.000Z",
+          "value": 1670.2
+        },
+        {
+          "timestamp": "2023-07-10T00:00:00.000Z",
+          "value": 1662.6
+        },
+        {
+          "timestamp": "2023-07-11T00:00:00.000Z",
+          "value": 1675.4
+        },
+        {
+          "timestamp": "2023-07-12T00:00:00.000Z",
+          "value": 1682.8
+        },
+        {
+          "timestamp": "2023-07-13T00:00:00.000Z",
+          "value": 1695.3
+        },
+        {
+          "timestamp": "2023-07-14T00:00:00.000Z",
+          "value": 1710.8
+        },
+        {
+          "timestamp": "2023-07-15T00:00:00.000Z",
+          "value": 1725.5
+        }
+      ],
+      "statistics": {
+        "mean": 1664.8,
+        "median": 1662.6,
+        "min": 1620.3,
+        "max": 1725.5,
+        "stddev": 28.9,
+        "trend": "INCREASING"
+      }
+    }
+  },
+  
+  "optimization_config_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "config_id": "optimization_config",
+      "optimization_types": {
+        "query": {
+          "enabled": true,
+          "min_execution_time_seconds": 60,
+          "min_bytes_processed": 1000000000,
+          "priority": "HIGH"
+        },
+        "schema": {
+          "enabled": true,
+          "min_table_size_bytes": 5000000000,
+          "query_volume_threshold": 10,
+          "priority": "MEDIUM"
+        },
+        "resource": {
+          "enabled": true,
+          "utilization_threshold": 0.7,
+          "min_monitoring_period_hours": 24,
+          "priority": "HIGH"
+        }
+      },
+      "implementation_settings": {
+        "automatic_implementation": {
+          "enabled": true,
+          "max_impact_level": "LOW",
+          "approval_required": false
+        },
+        "advisory_implementation": {
+          "enabled": true,
+          "impact_levels": ["MEDIUM", "HIGH"],
+          "approval_required": true
+        }
+      },
+      "exclusions": {
+        "critical_pipelines": ["financial_reporting", "compliance_data"],
+        "tables": ["audit_logs", "system_events"],
+        "time_windows": [
+          {
+            "start_time": "08:00:00",
+            "end_time": "18:00:00",
+            "days": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
+          }
+        ]
+      },
+      "created_at": "2023-06-01T10:00:00.000Z",
+      "updated_at": "2023-07-01T15:30:00.000Z",
+      "updated_by": "admin"
+    }
+  },
+  
+  "optimization_recommendation_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "recommendation_id": "rec_23456",
+      "optimization_type": "QUERY",
+      "target_object": {
+        "type": "QUERY",
+        "id": "query_78901",
+        "name": "daily_sales_aggregation"
+      },
+      "recommendation": "Add predicate pushdown and optimize JOIN order",
+      "details": {
+        "current_query": "SELECT * FROM sales_data JOIN customer_data ON sales_data.customer_id = customer_data.id WHERE order_date > '2023-07-01'",
+        "recommended_query": "SELECT * FROM sales_data JOIN customer_data ON sales_data.customer_id = customer_data.id AND sales_data.order_date > '2023-07-01' WHERE sales_data.order_date > '2023-07-01'"
+      },
+      "impact": {
+        "performance_improvement": 45.2,
+        "cost_savings_percent": 38.5,
+        "resource_reduction": {
+          "slots": 10,
+          "bytes_processed": 2500000000
+        },
+        "impact_level": "MEDIUM"
+      },
+      "implementation_status": "PENDING",
+      "created_at": "2023-07-14T18:30:15.000Z",
+      "expires_at": "2023-08-14T18:30:15.000Z"
+    }
+  },
+  
+  "optimization_recommendation_list_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "items": [
+        {
+          "recommendation_id": "rec_23456",
+          "optimization_type": "QUERY",
+          "target_object": {
+            "type": "QUERY",
+            "id": "query_78901",
+            "name": "daily_sales_aggregation"
+          },
+          "impact": {
+            "performance_improvement": 45.2,
+            "cost_savings_percent": 38.5,
+            "impact_level": "MEDIUM"
+          },
+          "implementation_status": "PENDING"
+        },
+        {
+          "recommendation_id": "rec_23457",
+          "optimization_type": "SCHEMA",
+          "target_object": {
+            "type": "TABLE",
+            "id": "sales_analytics.daily_sales",
+            "name": "daily_sales"
+          },
+          "impact": {
+            "performance_improvement": 30.5,
+            "cost_savings_percent": 25.8,
+            "impact_level": "MEDIUM"
+          },
+          "implementation_status": "PENDING"
+        },
+        {
+          "recommendation_id": "rec_23458",
+          "optimization_type": "RESOURCE",
+          "target_object": {
+            "type": "RESERVATION",
+            "id": "reservation_001",
+            "name": "analytics_reservation"
+          },
+          "impact": {
+            "performance_improvement": 0.0,
+            "cost_savings_percent": 15.0,
+            "impact_level": "LOW"
+          },
+          "implementation_status": "IMPLEMENTED"
+        }
+      ],
+      "pagination": {
+        "total_items": 12,
+        "total_pages": 4,
+        "current_page": 1,
+        "page_size": 3
+      }
+    }
+  },
+  
+  "optimization_implementation_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "implementation_id": "impl_34567",
+      "recommendation_id": "rec_23456",
+      "implementation_status": "SUCCESS",
+      "implementation_time": "2023-07-15T14:22:30.000Z",
+      "implemented_by": "system",
+      "results": {
+        "performance_before": {
+          "execution_time_seconds": 120.5,
+          "bytes_processed": 5000000000,
+          "slots_used": 25
+        },
+        "performance_after": {
+          "execution_time_seconds": 65.8,
+          "bytes_processed": 3000000000,
+          "slots_used": 15
+        },
+        "improvement": {
+          "execution_time_percent": 45.4,
+          "bytes_processed_percent": 40.0,
+          "slots_used_percent": 40.0
+        }
+      },
+      "details": "Successfully implemented query optimization with predicate pushdown"
+    }
+  },
+  
+  "health_check_response": {
+    "status": "SUCCESS",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "data": {
+      "system_health": "HEALTHY",
+      "components": {
+        "ingestion_service": {
+          "status": "HEALTHY",
+          "last_check": "2023-07-15T14:22:30.000Z",
+          "details": "All connectors operational"
+        },
+        "quality_service": {
+          "status": "HEALTHY",
+          "last_check": "2023-07-15T14:22:31.000Z",
+          "details": "Validation engine operational"
+        },
+        "healing_service": {
+          "status": "HEALTHY",
+          "last_check": "2023-07-15T14:22:32.000Z",
+          "details": "AI models operational"
+        },
+        "monitoring_service": {
+          "status": "HEALTHY",
+          "last_check": "2023-07-15T14:22:33.000Z",
+          "details": "Alerts operational"
+        },
+        "database_service": {
+          "status": "HEALTHY",
+          "last_check": "2023-07-15T14:22:34.000Z",
+          "details": "Database connections operational"
+        }
+      },
+      "dependencies": {
+        "bigquery": {
+          "status": "HEALTHY",
+          "details": "All regions operational"
+        },
+        "cloud_storage": {
+          "status": "HEALTHY",
+          "details": "All buckets accessible"
+        },
+        "cloud_composer": {
+          "status": "HEALTHY",
+          "details": "Environment running"
+        },
+        "vertex_ai": {
+          "status": "HEALTHY",
+          "details": "Model serving operational"
+        }
+      },
+      "system_metrics": {
+        "api_latency_ms": 125,
+        "error_rate_percent": 0.05,
+        "request_rate": 12.5
+      }
+    }
+  },
+  
+  "resource_not_found_error": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "RESOURCE_NOT_FOUND",
+      "message": "The requested resource was not found",
+      "details": {
+        "resource_type": "pipeline",
+        "resource_id": "pipe_999",
+        "request_id": "req_abcdef123456"
+      }
+    }
+  },
+  
+  "validation_error": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "The request contains invalid parameters",
+      "details": {
+        "field_errors": [
+          {
+            "field": "schedule",
+            "error": "Invalid cron expression format"
+          },
+          {
+            "field": "retry_count",
+            "error": "Value must be between 0 and 10"
+          }
+        ],
+        "request_id": "req_abcdef123456"
+      }
+    }
+  },
+  
+  "unauthorized_error": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "UNAUTHORIZED",
+      "message": "Authentication required to access this resource",
+      "details": {
+        "request_id": "req_abcdef123456"
+      }
+    }
+  },
+  
+  "forbidden_error": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "You do not have permission to access this resource",
+      "details": {
+        "resource_type": "pipeline",
+        "resource_id": "pipe_001",
+        "required_permission": "pipeline.edit",
+        "request_id": "req_abcdef123456"
+      }
+    }
+  },
+  
+  "server_error": {
+    "status": "ERROR",
+    "timestamp": "2023-07-15T14:22:34.123Z",
+    "error": {
+      "code": "INTERNAL_SERVER_ERROR",
+      "message": "An unexpected error occurred while processing your request",
+      "details": {
+        "trace_id": "trace_xyz789012345",
+        "request_id": "req_abcdef123456"
+      }
+    }
+  }
+}
