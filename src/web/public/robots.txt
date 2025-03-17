@@ -1,0 +1,11 @@
+User-agent: *
+# Disallow access to API endpoints
+Disallow: /api/
+# Disallow access to authentication routes
+Disallow: /auth/
+# Disallow access to admin sections
+Disallow: /admin/
+# Allow access to public documentation
+Allow: /docs/
+# Allow access to the main application
+Allow: /
