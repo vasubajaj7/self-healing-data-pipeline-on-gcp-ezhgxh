@@ -1,0 +1,406 @@
+/**
+ * Type definitions for the self-healing data pipeline system.
+ * 
+ * This file defines the data models for pipeline definitions, executions, 
+ * task executions, and API responses used throughout the application.
+ * 
+ * @version 1.0.0
+ */
+
+/**
+ * Represents a pipeline definition with all its configuration details.
+ */
+export interface PipelineDefinition {
+  pipeline_id: string;
+  name: string;
+  description: string;
+  pipeline_type: string;
+  source_id: string;
+  target_dataset: string;
+  target_table: string;
+  transformation_config: TransformationConfig;
+  quality_config: QualityConfig;
+  self_healing_config: SelfHealingConfig;
+  scheduling_config: SchedulingConfig;
+  execution_config: ExecutionConfig;
+  performance_config: PerformanceConfig;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+  metadata: Record<string, any>;
+  dag_id: string;
+  status: string;
+  last_execution?: ExecutionSummary;
+}
+
+/**
+ * Configuration for data transformations to be applied in the pipeline.
+ */
+export interface TransformationConfig {
+  transformations: Transformation[];
+  schema_mapping: Record<string, string>;
+}
+
+/**
+ * Represents a single transformation operation to be applied to the data.
+ */
+export interface Transformation {
+  type: string;
+  source: string;
+  target: string;
+  sources?: string[];
+  separator?: string;
+}
+
+/**
+ * Configuration for data quality validation in the pipeline.
+ */
+export interface QualityConfig {
+  validation_enabled: boolean;
+  threshold_score: number;
+  fail_on_validation_error: boolean;
+  quality_rule_ids: string[];
+}
+
+/**
+ * Configuration for the self-healing capabilities of the pipeline.
+ */
+export interface SelfHealingConfig {
+  enabled: boolean;
+  auto_correction: boolean;
+  confidence_threshold: number;
+  max_healing_attempts: number;
+  healing_strategies: string[];
+}
+
+/**
+ * Configuration for pipeline scheduling and execution triggers.
+ */
+export interface SchedulingConfig {
+  schedule_interval: string;
+  start_date: string;
+  end_date: string | null;
+  catchup: boolean;
+  depends_on_past: boolean;
+  retries: number;
+  retry_delay: number;
+}
+
+/**
+ * Configuration for the execution runtime of the pipeline.
+ */
+export interface ExecutionConfig {
+  timeout: number;
+  max_active_runs: number;
+  execution_timeout: number;
+  dagrun_timeout: number;
+  max_concurrent_tasks: number;
+}
+
+/**
+ * Configuration for performance optimization of the pipeline.
+ */
+export interface PerformanceConfig {
+  bigquery_slot_reservation: string;
+  write_disposition: string;
+  partition_field: string | null;
+  cluster_fields: string[];
+  query_priority: string;
+}
+
+/**
+ * Summary of a pipeline execution for display purposes.
+ */
+export interface ExecutionSummary {
+  execution_id: string;
+  status: string;
+  start_time: string;
+  end_time: string;
+  quality_score: number;
+}
+
+/**
+ * Represents a complete pipeline execution record with all details.
+ */
+export interface PipelineExecution {
+  execution_id: string;
+  pipeline_id: string;
+  dag_run_id: string;
+  status: string;
+  start_time: string;
+  end_time: string;
+  execution_params: Record<string, any>;
+  execution_metrics: ExecutionMetrics;
+  error_details: ErrorDetails;
+  retry_count: number;
+  retry_history: Record<string, RetryHistoryEntry>;
+  self_healing_attempts: SelfHealingAttempt[];
+  metadata: Record<string, any>;
+  records_processed: number;
+  records_failed: number;
+  quality_score: number | null;
+}
+
+/**
+ * Performance and processing metrics for a pipeline execution.
+ */
+export interface ExecutionMetrics {
+  records_processed: number;
+  records_failed: number;
+  processing_time_seconds: number;
+  data_size_bytes: number;
+  cpu_utilization_percent: number;
+  memory_utilization_percent: number;
+  slot_ms_consumed: number;
+  api_requests?: number;
+  api_request_time_ms?: number;
+}
+
+/**
+ * Detailed error information when a pipeline execution fails.
+ */
+export interface ErrorDetails {
+  error_type?: string;
+  error_message?: string;
+  timestamp?: string;
+  context?: Record<string, any>;
+}
+
+/**
+ * Information about a retry attempt for a failed execution.
+ */
+export interface RetryHistoryEntry {
+  timestamp: string;
+  reason: string;
+  params: Record<string, any>;
+}
+
+/**
+ * Represents a self-healing attempt made by the system.
+ */
+export interface SelfHealingAttempt {
+  healing_id: string;
+  issue_type: string;
+  action_taken: string;
+  timestamp: string;
+  successful: boolean;
+  details: SelfHealingDetails;
+}
+
+/**
+ * Detailed information about a self-healing action.
+ */
+export interface SelfHealingDetails {
+  column: string;
+  affected_rows: number;
+  confidence_score: number;
+  imputation_method?: string;
+  correction_method?: string;
+  range?: [number, number];
+  failure_reason?: string;
+}
+
+/**
+ * Represents a task execution within a pipeline execution.
+ */
+export interface TaskExecution {
+  task_execution_id: string;
+  execution_id: string;
+  task_id: string;
+  task_type: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  error_details: any;
+  retry_count: number;
+  metadata: Record<string, any>;
+}
+
+/**
+ * Response format for listing pipelines with pagination.
+ */
+export interface PipelineListResponse {
+  items: PipelineListItem[];
+  pagination: Pagination;
+}
+
+/**
+ * Simplified pipeline information for list views.
+ */
+export interface PipelineListItem {
+  pipeline_id: string;
+  name: string;
+  description: string;
+  pipeline_type: string;
+  source_id: string;
+  target_dataset: string;
+  target_table: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  last_execution?: ExecutionSummary;
+}
+
+/**
+ * Response format for listing pipeline executions with pagination.
+ */
+export interface PipelineExecutionListResponse {
+  items: PipelineExecutionListItem[];
+  pagination: Pagination;
+}
+
+/**
+ * Simplified execution information for list views.
+ */
+export interface PipelineExecutionListItem {
+  execution_id: string;
+  pipeline_id: string;
+  dag_run_id: string;
+  status: string;
+  start_time: string;
+  end_time: string;
+  duration_seconds: number;
+  records_processed: number;
+  records_failed: number;
+  quality_score: number | null;
+  has_self_healing: boolean;
+  retry_count: number;
+}
+
+/**
+ * Pagination information for list responses.
+ */
+export interface Pagination {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+/**
+ * Generic API response format with status code and body.
+ */
+export interface ApiResponse<T> {
+  status: number;
+  body: T;
+}
+
+/**
+ * Standard error response format.
+ */
+export interface ErrorResponse {
+  error: string;
+  message: string;
+  details?: string | string[];
+}
+
+/**
+ * Response format for the create pipeline API.
+ */
+export interface CreatePipelineResponse {
+  pipeline_id: string;
+  name: string;
+  description: string;
+  pipeline_type: string;
+  source_id: string;
+  target_dataset: string;
+  target_table: string;
+  transformation_config: Record<string, any>;
+  quality_config: Record<string, any>;
+  self_healing_config: Record<string, any>;
+  scheduling_config: Record<string, any>;
+  execution_config: Record<string, any>;
+  performance_config: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+  metadata: Record<string, any>;
+  dag_id: string;
+  status: string;
+}
+
+/**
+ * Response format for the run pipeline API.
+ */
+export interface RunPipelineResponse {
+  execution_id: string;
+  pipeline_id: string;
+  dag_run_id: string;
+  status: string;
+  start_time: string;
+  message: string;
+}
+
+/**
+ * Response format for listing task executions with pagination.
+ */
+export interface TaskExecutionListResponse {
+  items: TaskExecutionListItem[];
+  pagination: Pagination;
+}
+
+/**
+ * Simplified task execution information for list views.
+ */
+export interface TaskExecutionListItem {
+  task_execution_id: string;
+  execution_id: string;
+  task_id: string;
+  task_type: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  duration_seconds: number;
+  retry_count: number;
+}
+
+/**
+ * Represents a log entry in the system.
+ */
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  component: string;
+}
+
+/**
+ * Response format for retrieving logs with pagination.
+ */
+export interface LogsResponse {
+  logs: LogEntry[];
+  pagination: Pagination;
+}
+
+/**
+ * Collection of all API response formats for different operations.
+ */
+export interface ApiResponses {
+  createPipeline: {
+    success: ApiResponse<CreatePipelineResponse>;
+    validationError: ApiResponse<ErrorResponse>;
+  };
+  updatePipeline: {
+    success: ApiResponse<PipelineDefinition>;
+    validationError: ApiResponse<ErrorResponse>;
+    notFound: ApiResponse<ErrorResponse>;
+  };
+  runPipeline: {
+    success: ApiResponse<RunPipelineResponse>;
+    error: ApiResponse<ErrorResponse>;
+    notFound: ApiResponse<ErrorResponse>;
+  };
+  getPipelineExecutionTasks: {
+    success: ApiResponse<TaskExecutionListResponse>;
+    notFound: ApiResponse<ErrorResponse>;
+  };
+  getPipelineExecutionLogs: {
+    success: ApiResponse<LogsResponse>;
+    notFound: ApiResponse<ErrorResponse>;
+  };
+}
