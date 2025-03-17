@@ -1,0 +1,190 @@
+[
+  {
+    "conn_id": "google_cloud_default",
+    "conn_type": "google_cloud_platform",
+    "description": "Default connection for Google Cloud Platform services",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "keyfile_json": "{{ var.value.gcp_keyfile_json }}",
+      "scope": "https://www.googleapis.com/auth/cloud-platform"
+    }
+  },
+  {
+    "conn_id": "gcs_data",
+    "conn_type": "google_cloud_storage",
+    "description": "Connection for primary data bucket in Google Cloud Storage",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "bucket_name": "{{ var.value.gcs_bucket }}"
+    }
+  },
+  {
+    "conn_id": "gcs_staging",
+    "conn_type": "google_cloud_storage",
+    "description": "Connection for staging data bucket in Google Cloud Storage",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "bucket_name": "{{ var.value.gcs_staging_bucket }}"
+    }
+  },
+  {
+    "conn_id": "gcs_archive",
+    "conn_type": "google_cloud_storage",
+    "description": "Connection for archive data bucket in Google Cloud Storage",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "bucket_name": "{{ var.value.gcs_archive_bucket }}"
+    }
+  },
+  {
+    "conn_id": "bigquery_default",
+    "conn_type": "google_cloud_bigquery",
+    "description": "Default connection for BigQuery operations",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "dataset": "{{ var.value.bigquery_dataset }}",
+      "location": "{{ var.value.bigquery_location }}"
+    }
+  },
+  {
+    "conn_id": "cloudsql_customer",
+    "conn_type": "postgres",
+    "description": "Connection to customer database in Cloud SQL",
+    "host": "{{ var.value.cloudsql_customer_host }}",
+    "login": "{{ var.value.cloudsql_customer_user }}",
+    "password": "{{ var.value.cloudsql_customer_password }}",
+    "schema": "{{ var.value.cloudsql_customer_database }}",
+    "port": 5432,
+    "extra": {
+      "database_type": "postgres",
+      "instance_connection_name": "{{ var.value.gcp_project_id }}:{{ var.value.gcp_location }}:customer-db-instance"
+    }
+  },
+  {
+    "conn_id": "cloudsql_sales",
+    "conn_type": "postgres",
+    "description": "Connection to sales database in Cloud SQL",
+    "host": "{{ var.value.cloudsql_sales_host }}",
+    "login": "{{ var.value.cloudsql_sales_user }}",
+    "password": "{{ var.value.cloudsql_sales_password }}",
+    "schema": "{{ var.value.cloudsql_sales_database }}",
+    "port": 5432,
+    "extra": {
+      "database_type": "postgres",
+      "instance_connection_name": "{{ var.value.gcp_project_id }}:{{ var.value.gcp_location }}:sales-db-instance"
+    }
+  },
+  {
+    "conn_id": "cloudsql_product",
+    "conn_type": "postgres",
+    "description": "Connection to product database in Cloud SQL",
+    "host": "{{ var.value.cloudsql_product_host }}",
+    "login": "{{ var.value.cloudsql_product_user }}",
+    "password": "{{ var.value.cloudsql_product_password }}",
+    "schema": "{{ var.value.cloudsql_product_database }}",
+    "port": 5432,
+    "extra": {
+      "database_type": "postgres",
+      "instance_connection_name": "{{ var.value.gcp_project_id }}:{{ var.value.gcp_location }}:product-db-instance"
+    }
+  },
+  {
+    "conn_id": "product_api",
+    "conn_type": "http",
+    "description": "Connection to product catalog API",
+    "host": "{{ var.value.product_api_host }}",
+    "port": 443,
+    "login": "{{ var.value.product_api_key }}",
+    "password": "{{ var.value.product_api_secret }}",
+    "schema": "https",
+    "extra": {
+      "token_url": "{{ var.value.product_api_token_url }}",
+      "auth_type": "oauth2",
+      "timeout_seconds": 60,
+      "retry_limit": 3,
+      "retry_delay": 5
+    }
+  },
+  {
+    "conn_id": "vendor_api",
+    "conn_type": "http",
+    "description": "Connection to vendor API",
+    "host": "{{ var.value.vendor_api_host }}",
+    "port": 443,
+    "login": "{{ var.value.vendor_api_key }}",
+    "schema": "https",
+    "extra": {
+      "auth_type": "api_key",
+      "timeout_seconds": 60,
+      "retry_limit": 3,
+      "retry_delay": 5
+    }
+  },
+  {
+    "conn_id": "vendor_sftp",
+    "conn_type": "sftp",
+    "description": "SFTP connection to vendor file transfer system",
+    "host": "{{ var.value.vendor_sftp_host }}",
+    "login": "{{ var.value.vendor_sftp_user }}",
+    "password": "{{ var.value.vendor_sftp_password }}",
+    "port": 22,
+    "extra": {
+      "key_file": "{{ var.value.vendor_sftp_key_file }}",
+      "no_host_key_check": "true",
+      "timeout_seconds": 120
+    }
+  },
+  {
+    "conn_id": "ms_teams_webhook",
+    "conn_type": "http",
+    "description": "Microsoft Teams webhook for alert notifications",
+    "host": "outlook.office.com",
+    "schema": "https",
+    "extra": {
+      "webhook_url": "{{ var.value.teams_webhook_url }}",
+      "timeout_seconds": 30,
+      "retry_limit": 3
+    }
+  },
+  {
+    "conn_id": "email_smtp",
+    "conn_type": "smtp",
+    "description": "SMTP connection for email notifications",
+    "host": "{{ var.value.smtp_host }}",
+    "port": "{{ var.value.smtp_port }}",
+    "login": "{{ var.value.smtp_user }}",
+    "password": "{{ var.value.smtp_password }}",
+    "extra": {
+      "use_tls": "true",
+      "from_email": "{{ var.value.smtp_user }}"
+    }
+  },
+  {
+    "conn_id": "vertex_ai",
+    "conn_type": "google_cloud_platform",
+    "description": "Connection for Vertex AI services",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "location": "{{ var.value.vertex_ai_region }}",
+      "scope": "https://www.googleapis.com/auth/cloud-platform"
+    }
+  },
+  {
+    "conn_id": "secret_manager",
+    "conn_type": "google_cloud_platform",
+    "description": "Connection for Secret Manager access",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "scope": "https://www.googleapis.com/auth/cloud-platform"
+    }
+  },
+  {
+    "conn_id": "monitoring",
+    "conn_type": "google_cloud_platform",
+    "description": "Connection for Cloud Monitoring services",
+    "extra": {
+      "project": "{{ var.value.gcp_project_id }}",
+      "scope": "https://www.googleapis.com/auth/monitoring"
+    }
+  }
+]
