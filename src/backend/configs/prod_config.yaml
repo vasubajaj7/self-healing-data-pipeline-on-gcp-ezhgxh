@@ -1,0 +1,324 @@
+#==============================================================================
+# Self-Healing Data Pipeline Production Configuration
+#
+# This file contains production-specific configuration overrides for the
+# self-healing data pipeline. It extends default_config.yaml with settings
+# optimized for reliability, performance, and security in production.
+#==============================================================================
+
+#------------------------------------------------------------------------------
+# Application settings
+#------------------------------------------------------------------------------
+app:
+  name: self-healing-pipeline
+  version: 1.0.0
+  description: Self-healing data pipeline for BigQuery using Google Cloud services and AI-driven automation
+  environment: production
+
+#------------------------------------------------------------------------------
+# Logging configuration
+#------------------------------------------------------------------------------
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: logs/pipeline-prod.log
+  max_size_mb: 200
+  backup_count: 10
+  console_output: false
+
+#------------------------------------------------------------------------------
+# Google Cloud Platform settings
+#------------------------------------------------------------------------------
+gcp:
+  project_id: shp-production-project
+  location: us-central1
+  service_account: shp-service-account@shp-production-project.iam.gserviceaccount.com
+
+#------------------------------------------------------------------------------
+# BigQuery settings
+#------------------------------------------------------------------------------
+bigquery:
+  dataset: self_healing_pipeline_prod
+  location: US
+  query_timeout_seconds: 300
+  max_slots: 200
+  use_legacy_sql: false
+
+#------------------------------------------------------------------------------
+# Google Cloud Storage settings
+#------------------------------------------------------------------------------
+gcs:
+  bucket: self-healing-pipeline-prod
+  staging_folder: staging
+  archive_folder: archive
+  temp_folder: temp
+  data_folder: data
+  config_folder: config
+  retention_days:
+    staging: 7
+    archive: 365
+    temp: 1
+
+#------------------------------------------------------------------------------
+# Cloud Composer (Airflow) settings
+#------------------------------------------------------------------------------
+composer:
+  environment: self-healing-pipeline-prod
+  location: us-central1
+  dag_folder: dags
+  schedule_interval:
+    default: "0 */2 * * *"  # Every 2 hours
+    monitoring: "*/5 * * * *"  # Every 5 minutes
+    optimization: "0 0 * * 0"  # Weekly on Sunday
+  catchup: false
+  max_active_runs: 10
+  retries: 3
+  retry_delay_minutes: 5
+
+#------------------------------------------------------------------------------
+# Data Ingestion settings
+#------------------------------------------------------------------------------
+ingestion:
+  batch_size: 2000
+  max_batch_size: 10000
+  parallel_workers: 10
+  max_parallel_workers: 20
+  timeout_seconds: 300
+  retry_attempts: 3
+  retry_backoff_factor: 2.0
+  
+  sources:
+    gcs:
+      enabled: true
+      polling_interval_seconds: 30
+    
+    cloud_sql:
+      enabled: true
+      connection_pool_size: 10
+      max_connections: 20
+    
+    external_api:
+      enabled: true
+      request_timeout_seconds: 30
+      max_retries: 3
+      rate_limit_per_minute: 120
+    
+    third_party_db:
+      enabled: true
+      connection_timeout_seconds: 30
+
+#------------------------------------------------------------------------------
+# Data Quality settings
+#------------------------------------------------------------------------------
+quality:
+  validation:
+    enabled: true
+    timeout_seconds: 300
+    max_retries: 3
+    quality_threshold: 0.95  # Higher quality threshold for production
+    scoring_model: weighted
+    rules_path: configs/quality_rules.yaml
+    
+    great_expectations:
+      enabled: true
+      expectations_store: gcs
+      validations_store: gcs
+      data_docs_site: gcs
+  
+  issue_handling:
+    critical_threshold: 0.7
+    warning_threshold: 0.9
+    auto_fix_enabled: true
+    notification_on_failure: true
+
+#------------------------------------------------------------------------------
+# Self-Healing settings
+#------------------------------------------------------------------------------
+self_healing:
+  enabled: true
+  mode: SEMI_AUTOMATIC  # More cautious approach for production
+  confidence_threshold: 0.9  # Higher confidence for production
+  max_retry_attempts: 3
+  approval_required:
+    critical: true
+    high: true
+    medium: true  # Require approval for medium severity in production
+    low: false
+  learning_enabled: true
+  rules_path: configs/healing_rules.yaml
+  
+  action_parameters:
+    data_correction:
+      confidence_threshold: 0.95  # Higher threshold for production
+      max_retries: 2
+      approval_required: true  # Require approval in production
+    
+    pipeline_adjustment:
+      confidence_threshold: 0.9
+      max_retries: 3
+      approval_required: true  # Require approval in production
+    
+    resource_optimization:
+      confidence_threshold: 0.85
+      max_retries: 2
+      approval_required: true  # Require approval in production
+    
+    recovery:
+      confidence_threshold: 0.9
+      max_retries: 3
+      approval_required: false
+  
+  model_registry:
+    path: models/prod
+    version_retention: 3  # Keep fewer versions in production
+    retraining_interval_days: 14  # Less frequent retraining in production
+
+#------------------------------------------------------------------------------
+# Monitoring and Alerting settings
+#------------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  metrics_collection_interval_seconds: 30  # More frequent collection in production
+  log_analysis_enabled: true
+  
+  anomaly_detection:
+    enabled: true
+    sensitivity: 0.85
+    training_period_days: 30  # Longer training period for production
+    min_data_points: 200  # More data points for stable models
+  
+  alerting:
+    enabled: true
+    rules_path: configs/alert_rules.yaml
+    alert_deduplication_window_minutes: 15
+    alert_correlation_enabled: true
+    
+    notification_channels:
+      teams:
+        enabled: true
+        webhook_url: secret://prod-teams-webhook-url
+        mention_on_critical: true
+      
+      email:
+        enabled: true
+        recipients: [data-engineering-alerts@example.com, operations-team@example.com]
+        send_on_severity: [CRITICAL, HIGH]
+      
+      sms:
+        enabled: true
+        recipients: [secret://oncall-phone-number]
+        send_on_severity: [CRITICAL]
+      
+      webhook:
+        enabled: true
+        url: secret://prod-alert-webhook-url
+        send_on_severity: [CRITICAL, HIGH]
+    
+    thresholds:
+      pipeline_failure_rate:
+        warning: 0.03  # More strict in production (3%)
+        critical: 0.08  # More strict in production (8%)
+        lookback_period_hours: 24
+      
+      data_processing_latency:
+        warning: 0.15  # More strict in production (15%)
+        critical: 0.3   # More strict in production (30%)
+        lookback_period_days: 7
+      
+      quality_validation_failure:
+        warning: 0.01  # More strict in production (1%)
+        critical: 0.03  # More strict in production (3%)
+        lookback_period_hours: 24
+      
+      self_healing_success_rate:
+        warning: 0.95  # Higher expectations in production (95%)
+        critical: 0.85  # Higher expectations in production (85%)
+        lookback_period_days: 7
+      
+      resource_utilization:
+        warning: 0.7
+        critical: 0.85
+        lookback_period_hours: 1
+      
+      error_rate:
+        warning: 1.5  # More strict in production (1.5x baseline)
+        critical: 4.0  # More strict in production (4x baseline)
+        lookback_period_days: 7
+  
+  dashboards:
+    refresh_interval_seconds: 300
+    default_time_range_hours: 24
+
+#------------------------------------------------------------------------------
+# Performance Optimization settings
+#------------------------------------------------------------------------------
+optimization:
+  enabled: true
+  schedule_interval: "0 0 * * 0"  # Weekly on Sunday
+  
+  query_optimization:
+    enabled: true
+    min_execution_time_seconds: 10
+    min_bytes_processed: 1073741824  # 1 GB
+    optimization_threshold: 0.2
+  
+  schema_optimization:
+    enabled: true
+    partitioning_analysis_enabled: true
+    clustering_analysis_enabled: true
+    min_table_size_gb: 1
+    min_query_count: 10
+  
+  resource_optimization:
+    enabled: true
+    slot_utilization_threshold: 0.7
+    idle_resource_threshold: 0.3
+    cost_optimization_enabled: true
+  
+  implementation:
+    auto_implement: false  # Require manual implementation in production
+    approval_required: true
+    implementation_window: "0 0 * * 0"  # Weekly on Sunday
+
+#------------------------------------------------------------------------------
+# API settings
+#------------------------------------------------------------------------------
+api:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000
+  debug: false
+  
+  cors:
+    enabled: true
+    allow_origins: [https://pipeline.example.com, https://api.pipeline.example.com]  # Specific origins in production
+    allow_methods: [GET, POST, PUT, DELETE, OPTIONS]
+    allow_headers: [Authorization, Content-Type]
+  
+  auth:
+    enabled: true
+    jwt_secret: secret://prod-jwt-secret
+    token_expiration_minutes: 30  # Shorter expiration in production
+    refresh_token_expiration_days: 7
+  
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst: 20
+
+#------------------------------------------------------------------------------
+# Security settings
+#------------------------------------------------------------------------------
+security:
+  encryption:
+    at_rest: true
+    in_transit: true
+    customer_managed_keys: true  # Use customer-managed keys in production
+  
+  access_control:
+    strict_mode: true  # Enable strict mode in production
+    review_interval_days: 30
+  
+  secrets:
+    use_secret_manager: true
+    rotation_interval_days: 30  # More frequent rotation in production
