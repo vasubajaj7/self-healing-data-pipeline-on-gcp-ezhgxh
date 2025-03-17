@@ -1,0 +1,232 @@
+# BigQuery Optimization Configuration
+# This configuration file controls the behavior of the self-healing data pipeline's
+# performance optimization components for BigQuery.
+# Version: 1.0.0
+
+# Query Optimization Settings
+query_optimization:
+  # Master toggle for query optimization features
+  enabled: true
+  # Minimum confidence level required for automated optimization
+  default_confidence_threshold: 0.8
+  # Maximum number of optimization iterations to attempt
+  max_optimization_iterations: 3
+  # Whether to validate query results match after optimization
+  validation_required: true
+  # Enable caching of optimization results
+  cache_enabled: true
+  # Time-to-live for cached optimization results in seconds
+  cache_ttl_seconds: 3600
+  
+  # Specific optimization techniques
+  techniques:
+    predicate_pushdown:
+      enabled: true
+      description: "Move predicates closer to data sources"
+      confidence_threshold: 0.9
+      priority: 1
+    join_reordering:
+      enabled: true
+      description: "Reorder joins for optimal performance"
+      confidence_threshold: 0.8
+      priority: 2
+    subquery_flattening:
+      enabled: true
+      description: "Flatten unnecessary subqueries"
+      confidence_threshold: 0.7
+      priority: 3
+    column_pruning:
+      enabled: true
+      description: "Remove unused columns"
+      confidence_threshold: 0.9
+      priority: 1
+    aggregation_optimization:
+      enabled: true
+      description: "Optimize aggregation operations"
+      confidence_threshold: 0.8
+      priority: 2
+    cte_conversion:
+      enabled: true
+      description: "Convert subqueries to CTEs"
+      confidence_threshold: 0.7
+      priority: 3
+  
+  # Validation settings for query optimization
+  validation:
+    # Number of rows to use when validating optimized queries
+    row_limit_for_validation: 1000
+    # Threshold for result similarity to consider valid (0.0-1.0)
+    similarity_threshold: 0.99
+    # Timeout for validation queries in seconds
+    timeout_seconds: 30
+    # Whether to validate only schema match and not data
+    validate_schema_only: false
+
+# Partitioning Optimization Settings
+partitioning_optimization:
+  # Master toggle for partitioning optimization
+  enabled: true
+  # Minimum table size in MB to consider for partitioning
+  min_table_size_mb: 1000
+  # Maximum number of partitions to recommend (BigQuery limit: 4000)
+  max_partitions_recommended: 4000
+  # Minimum size in MB for individual partitions
+  min_partition_size_mb: 100
+  # Default number of days to analyze for historical data patterns
+  default_history_days: 30
+  
+  # Partition type configurations
+  partition_types:
+    time_unit:
+      enabled: true
+      priority: 1
+      units: ["day", "month", "year"]
+      default_unit: "day"
+    integer_range:
+      enabled: true
+      priority: 2
+      default_range_size: 1000
+    ingestion_time:
+      enabled: true
+      priority: 3
+  
+  # Partition expiration settings
+  expiration:
+    # Default partition expiration in days
+    default_expiration_days: 90
+    # Enable automatic expiration recommendations
+    enable_recommendations: true
+    # Minimum expiration days to recommend
+    min_expiration_days: 30
+    # Maximum expiration days to recommend
+    max_expiration_days: 365
+  
+  # Implementation settings for partitioning changes
+  implementation:
+    # Create backup before implementing partitioning changes
+    create_backup: true
+    # Validate data integrity after partitioning changes
+    validate_after_implementation: true
+    # Maximum batch size in GB for partition migration operations
+    max_migration_batch_size_gb: 10
+
+# Schema Optimization Settings
+schema_optimization:
+  # Master toggle for schema optimization
+  enabled: true
+  
+  # Column type optimization settings
+  column_type_optimization:
+    enabled: true
+    # Percentiles to analyze for string length optimization
+    string_length_percentiles: [50, 75, 90, 95, 99]
+    # Thresholds for numeric type optimization
+    numeric_type_thresholds:
+      INT64: 9223372036854775807
+      INT: 2147483647
+      SMALLINT: 32767
+      TINYINT: 127
+    # Minimum rows needed for meaningful analysis
+    min_rows_for_analysis: 1000
+    # Sample size to use for column analysis
+    sample_size: 10000
+  
+  # Nested structure optimization settings
+  nested_structure_optimization:
+    enabled: true
+    # Detect column name prefixes for potential nesting
+    prefix_pattern_detection: true
+    # Maximum nesting depth to recommend
+    max_nesting_depth: 5
+    # Minimum number of related columns to suggest nesting
+    min_related_columns: 3
+  
+  # Column order optimization settings
+  column_order_optimization:
+    enabled: true
+    # Prioritize frequently queried columns at the beginning
+    prioritize_frequently_queried: true
+  
+  # Implementation settings for schema changes
+  implementation:
+    # Create backup before implementing schema changes
+    create_backup: true
+    # Validate data integrity after schema changes
+    validate_after_implementation: true
+    # Allow suggesting column type changes
+    allow_column_type_changes: true
+    # Allow suggesting nested structure changes
+    allow_nested_structure_changes: true
+
+# Clustering Optimization Settings
+clustering_optimization:
+  # Master toggle for clustering optimization
+  enabled: true
+  # Maximum number of clustering columns (BigQuery limit: 4)
+  max_clustering_columns: 4
+  # Minimum query count for a column to be a clustering candidate
+  min_query_count_for_candidate: 10
+  # Minimum percentage of queries that filter on a column
+  min_filter_percentage: 20
+  
+  # Cardinality settings for clustering columns
+  cardinality:
+    # Minimum distinct values for a clustering column
+    min_distinct_values: 100
+    # Maximum ratio of distinct values to total rows
+    max_distinct_values_ratio: 0.1
+  
+  # Implementation settings for clustering changes
+  implementation:
+    # Create backup before implementing clustering changes
+    create_backup: true
+    # Validate query performance after clustering changes
+    validate_after_implementation: true
+
+# Cost Optimization Settings
+cost_optimization:
+  # Slot allocation optimization settings
+  slot_allocation:
+    # Enable slot allocation recommendations
+    enable_recommendations: true
+    # Minimum utilization threshold to trigger scaling
+    min_utilization_threshold: 0.6
+    # Maximum utilization threshold to trigger scaling
+    max_utilization_threshold: 0.8
+    # Period in days to analyze for utilization patterns
+    analysis_period_days: 30
+  
+  # Query cost threshold settings
+  query_cost_thresholds:
+    # Threshold in bytes for high-cost queries (10GB)
+    high_cost_threshold_bytes: 10737418240
+    # Threshold in bytes for medium-cost queries (1GB)
+    medium_cost_threshold_bytes: 1073741824
+    # Prioritize optimization of high-cost queries
+    prioritize_high_cost_queries: true
+  
+  # Storage cost optimization settings
+  storage_optimization:
+    # Enable storage optimization recommendations
+    enable_recommendations: true
+    # Analyze opportunities for compression
+    analyze_compression_opportunities: true
+    # Analyze opportunities for table expiration
+    analyze_table_expiration: true
+    # Default table expiration in days
+    default_table_expiration_days: 90
+
+# Monitoring Settings for Optimization Components
+monitoring:
+  # Collect metrics on optimization activities
+  collect_optimization_metrics: true
+  # Track effectiveness of applied optimizations
+  effectiveness_tracking_enabled: true
+  # Period in days to track optimization effectiveness
+  effectiveness_tracking_period_days: 30
+  # Alert on performance regression after optimization
+  alert_on_regression: true
+  # Threshold percentage for regression alerts
+  regression_threshold_percentage: 20
+  # Enable integration with monitoring dashboards
+  dashboard_integration_enabled: true
