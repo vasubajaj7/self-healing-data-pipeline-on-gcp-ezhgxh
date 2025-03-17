@@ -1,0 +1,691 @@
+{
+  "sample_corrections": [
+    {
+      "correction_id": "corr-001",
+      "issue_id": "issue-001",
+      "healing_id": "heal_20230615_001",
+      "execution_id": "exec_20230615_001",
+      "pattern_id": "pattern_outliers_001",
+      "action_id": "action_outliers_capping_001",
+      "issue_type": "outliers",
+      "correction_strategy": "winsorization",
+      "correction_time": "2023-06-15T10:16:05Z",
+      "successful": true,
+      "confidence_score": 0.92,
+      "correction_details": {
+        "dataset": "sales_data",
+        "table": "daily_sales",
+        "column": "value",
+        "affected_rows": 5,
+        "values_before": [105.2, 110.5, 103.7, 101.2, 102.8],
+        "values_after": [100.0, 100.0, 100.0, 100.0, 100.0],
+        "parameters": {
+          "strategy": "winsorization",
+          "limits": [0.05, 0.05],
+          "max_value": 100.0
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_001_post",
+        "passed": true,
+        "quality_score_before": 0.95,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_006",
+          "unexpected_count_before": 5,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 1.0,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 3.2,
+        "memory_usage_mb": 128,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-002",
+      "issue_id": "issue-002",
+      "healing_id": "heal_20230615_002",
+      "execution_id": "exec_20230615_002",
+      "pattern_id": "pattern_format_errors_001",
+      "action_id": "action_format_standardization_001",
+      "issue_type": "format_errors",
+      "correction_strategy": "date_format_correction",
+      "correction_time": "2023-06-15T10:16:15Z",
+      "successful": true,
+      "confidence_score": 0.88,
+      "correction_details": {
+        "dataset": "customer_profiles",
+        "table": "customer_activity",
+        "column": "timestamp",
+        "affected_rows": 3,
+        "values_before": ["invalid-date", "2023/13/45", "not-a-date"],
+        "values_after": [null, "2023-01-01T00:00:00Z", null],
+        "parameters": {
+          "strategy": "date_format_correction",
+          "target_format": "ISO-8601",
+          "handle_unparseable": "nullify"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_002_post",
+        "passed": true,
+        "quality_score_before": 0.94,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_008",
+          "unexpected_count_before": 3,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 0.6,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 2.8,
+        "memory_usage_mb": 112,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-003",
+      "issue_id": "issue-003",
+      "healing_id": "heal_20230615_003",
+      "execution_id": "exec_20230615_003",
+      "pattern_id": "pattern_data_corruption_001",
+      "action_id": "action_data_recomputation_001",
+      "issue_type": "data_corruption",
+      "correction_strategy": "recomputation",
+      "correction_time": "2023-06-15T10:16:25Z",
+      "successful": true,
+      "confidence_score": 0.95,
+      "correction_details": {
+        "dataset": "product_catalog",
+        "table": "product_details",
+        "column": "value",
+        "affected_rows": 4,
+        "group_values_before": {"A": 8, "B": 12, "C": 5, "D": 5},
+        "group_values_after": {"A": 8, "B": 12, "C": 5, "D": 5},
+        "parameters": {
+          "strategy": "recomputation",
+          "aggregation_function": "sum",
+          "group_by_column": "category"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_003_post",
+        "passed": true,
+        "quality_score_before": 0.92,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_011",
+          "expected_sum": 30,
+          "actual_sum_before": 30,
+          "actual_sum_after": 30,
+          "consistency_check_passed": true
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 4.5,
+        "memory_usage_mb": 156,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-004",
+      "issue_id": "issue-004",
+      "healing_id": "heal_20230615_004",
+      "execution_id": "exec_20230615_004",
+      "pattern_id": "pattern_missing_values_001",
+      "action_id": "action_missing_values_imputation_001",
+      "issue_type": "missing_values",
+      "correction_strategy": "mode_imputation",
+      "correction_time": "2023-06-15T10:16:35Z",
+      "successful": true,
+      "confidence_score": 0.85,
+      "correction_details": {
+        "dataset": "customer_profiles",
+        "table": "customer_details",
+        "column": "name",
+        "affected_rows": 25,
+        "values_before": [null, null, null],
+        "values_after": ["Unknown Customer", "Unknown Customer", "Unknown Customer"],
+        "parameters": {
+          "strategy": "mode_imputation",
+          "fallback_value": "Unknown Customer"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_004_post",
+        "passed": true,
+        "quality_score_before": 0.9,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_013",
+          "unexpected_count_before": 25,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 5.0,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 2.1,
+        "memory_usage_mb": 98,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-005",
+      "issue_id": "issue-005",
+      "healing_id": "heal_20230615_005",
+      "execution_id": "exec_20230615_005",
+      "pattern_id": "pattern_referential_integrity_001",
+      "action_id": "action_deduplication_001",
+      "issue_type": "referential_integrity",
+      "correction_strategy": "deduplication",
+      "correction_time": "2023-06-15T10:16:45Z",
+      "successful": true,
+      "confidence_score": 0.78,
+      "correction_details": {
+        "dataset": "sales_data",
+        "table": "transactions",
+        "column": "id",
+        "affected_rows": 6,
+        "duplicate_ids": ["DUP001", "DUP002", "DUP003"],
+        "resolution_strategy": "keep_first",
+        "parameters": {
+          "strategy": "deduplication",
+          "method": "keep_first",
+          "identify_by": "id"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_005_post",
+        "passed": true,
+        "quality_score_before": 0.85,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_014",
+          "unexpected_count_before": 6,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 1.2,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 3.8,
+        "memory_usage_mb": 142,
+        "execution_mode": "approval_required",
+        "approval_required": true,
+        "approved_by": "user123",
+        "approval_time": "2023-06-15T10:16:40Z"
+      }
+    },
+    {
+      "correction_id": "corr-006",
+      "issue_id": "issue-006",
+      "healing_id": "heal_20230615_006",
+      "execution_id": "exec_20230615_006",
+      "pattern_id": "pattern_data_corruption_002",
+      "action_id": "action_standardization_001",
+      "issue_type": "data_corruption",
+      "correction_strategy": "standardization",
+      "correction_time": "2023-06-15T10:16:55Z",
+      "successful": true,
+      "confidence_score": 0.91,
+      "correction_details": {
+        "dataset": "product_catalog",
+        "table": "product_categories",
+        "column": "category",
+        "affected_rows": 3,
+        "values_before": ["E", "F", "X"],
+        "values_after": ["A", "A", "D"],
+        "parameters": {
+          "strategy": "standardization",
+          "mapping": {"E": "A", "F": "A", "X": "D"},
+          "allowed_values": ["A", "B", "C", "D"]
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_006_post",
+        "passed": true,
+        "quality_score_before": 0.93,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_015",
+          "unexpected_count_before": 3,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 0.6,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 1.9,
+        "memory_usage_mb": 86,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-007",
+      "issue_id": "issue-007",
+      "healing_id": "heal_20230615_007",
+      "execution_id": "exec_20230615_007",
+      "pattern_id": "pattern_schema_drift_001",
+      "action_id": "action_schema_evolution_001",
+      "issue_type": "schema_drift",
+      "correction_strategy": "schema_evolution",
+      "correction_time": "2023-06-15T10:17:05Z",
+      "successful": true,
+      "confidence_score": 0.82,
+      "correction_details": {
+        "dataset": "inventory",
+        "table": "stock_levels",
+        "affected_columns": ["new_column"],
+        "schema_before": ["id", "name", "value", "timestamp", "category", "new_column"],
+        "schema_after": ["id", "name", "value", "timestamp", "category", "new_column"],
+        "parameters": {
+          "strategy": "schema_evolution",
+          "action": "register_new_column",
+          "column_metadata": {
+            "new_column": {
+              "type": "STRING",
+              "description": "Newly added column detected and registered"
+            }
+          }
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_007_post",
+        "passed": true,
+        "quality_score_before": 0.88,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_016",
+          "unexpected_columns_before": ["new_column"],
+          "unexpected_columns_after": [],
+          "schema_updated": true
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 5.2,
+        "memory_usage_mb": 110,
+        "execution_mode": "approval_required",
+        "approval_required": true,
+        "approved_by": "user456",
+        "approval_time": "2023-06-15T10:17:00Z"
+      }
+    },
+    {
+      "correction_id": "corr-008",
+      "issue_id": "issue-008",
+      "healing_id": "heal_20230615_008",
+      "execution_id": "exec_20230615_008",
+      "pattern_id": "pattern_format_errors_002",
+      "action_id": "action_type_conversion_001",
+      "issue_type": "format_errors",
+      "correction_strategy": "type_conversion",
+      "correction_time": "2023-06-15T10:17:15Z",
+      "successful": true,
+      "confidence_score": 0.89,
+      "correction_details": {
+        "dataset": "sales_data",
+        "table": "product_sales",
+        "column": "value",
+        "affected_rows": 3,
+        "values_before": ["abc", "N/A", "unknown"],
+        "values_after": [0.0, 0.0, 0.0],
+        "parameters": {
+          "strategy": "type_conversion",
+          "target_type": "FLOAT",
+          "default_value": 0.0,
+          "handle_errors": "use_default"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_008_post",
+        "passed": true,
+        "quality_score_before": 0.91,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "rule_id": "rule_017",
+          "unexpected_count_before": 3,
+          "unexpected_count_after": 0,
+          "unexpected_percent_before": 0.6,
+          "unexpected_percent_after": 0.0
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 2.4,
+        "memory_usage_mb": 94,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-009",
+      "issue_id": "issue-009",
+      "healing_id": "heal_20230615_009",
+      "execution_id": "exec_20230615_009",
+      "pattern_id": "pattern_referential_integrity_002",
+      "action_id": "action_reference_repair_001",
+      "issue_type": "referential_integrity",
+      "correction_strategy": "reference_repair",
+      "correction_time": "2023-06-15T10:17:25Z",
+      "successful": false,
+      "confidence_score": 0.65,
+      "correction_details": {
+        "dataset": "product_catalog",
+        "table": "product_details",
+        "column": "category_id",
+        "affected_rows": 3,
+        "values_before": [101, 102, 103],
+        "values_after": [101, 102, 103],
+        "parameters": {
+          "strategy": "reference_repair",
+          "reference_table": "categories",
+          "reference_column": "id",
+          "fallback_action": "keep_original"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_009_post",
+        "passed": false,
+        "quality_score_before": 0.89,
+        "quality_score_after": 0.89,
+        "validation_details": {
+          "rule_id": "rule_018",
+          "unexpected_count_before": 3,
+          "unexpected_count_after": 3,
+          "unexpected_percent_before": 0.6,
+          "unexpected_percent_after": 0.6,
+          "failure_reason": "Reference values not found and no suitable replacements available"
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 3.1,
+        "memory_usage_mb": 118,
+        "execution_mode": "automatic",
+        "approval_required": false,
+        "error_message": "Failed to find or create reference values in categories table"
+      }
+    },
+    {
+      "correction_id": "corr-010",
+      "issue_id": "issue-010",
+      "healing_id": "heal_20230615_010",
+      "execution_id": "exec_20230615_010",
+      "pattern_id": "pattern_outliers_002",
+      "action_id": "action_outliers_transformation_001",
+      "issue_type": "outliers",
+      "correction_strategy": "transformation",
+      "correction_time": "2023-06-15T10:17:35Z",
+      "successful": true,
+      "confidence_score": 0.87,
+      "correction_details": {
+        "dataset": "analytics",
+        "table": "user_metrics",
+        "column": "value",
+        "affected_rows": 500,
+        "transformation_applied": "log_transform",
+        "distribution_before": {
+          "skewness": 1.8,
+          "kurtosis": 5.2,
+          "p_value": 0.01
+        },
+        "distribution_after": {
+          "skewness": 0.3,
+          "kurtosis": 2.9,
+          "p_value": 0.42
+        },
+        "parameters": {
+          "strategy": "transformation",
+          "method": "log_transform",
+          "add_constant": 1.0
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_010_post",
+        "passed": true,
+        "quality_score_before": 0.95,
+        "quality_score_after": 0.98,
+        "validation_details": {
+          "rule_id": "rule_019",
+          "expected_distribution": "normal",
+          "p_value_before": 0.01,
+          "p_value_after": 0.42,
+          "normality_improved": true
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 6.7,
+        "memory_usage_mb": 245,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-011",
+      "issue_id": "issue-011",
+      "healing_id": "heal_20230615_011",
+      "execution_id": "exec_20230615_011",
+      "pattern_id": "pattern_resource_exhaustion_001",
+      "action_id": "action_resource_scaling_001",
+      "issue_type": "resource_exhaustion",
+      "correction_strategy": "resource_scaling",
+      "correction_time": "2023-06-15T10:17:45Z",
+      "successful": true,
+      "confidence_score": 0.94,
+      "correction_details": {
+        "resource_type": "BIGQUERY_SLOTS",
+        "current_usage": 2000,
+        "limit": 2000,
+        "action_taken": "increase_reservation",
+        "parameters": {
+          "strategy": "resource_scaling",
+          "reservation_name": "analytics-reservation",
+          "previous_slots": 2000,
+          "new_slots": 3000,
+          "duration_minutes": 60
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_011_post",
+        "passed": true,
+        "quality_score_before": 0.0,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "job_id": "project:region:job_20230615_001",
+          "job_status_before": "FAILED",
+          "job_status_after": "SUCCESS",
+          "execution_time_seconds": 145
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 12.3,
+        "memory_usage_mb": 86,
+        "execution_mode": "approval_required",
+        "approval_required": true,
+        "approved_by": "admin789",
+        "approval_time": "2023-06-15T10:17:35Z"
+      }
+    },
+    {
+      "correction_id": "corr-012",
+      "issue_id": "issue-012",
+      "healing_id": "heal_20230615_012",
+      "execution_id": "exec_20230615_012",
+      "pattern_id": "pattern_timeout_001",
+      "action_id": "action_parameter_adjustment_001",
+      "issue_type": "timeout",
+      "correction_strategy": "parameter_adjustment",
+      "correction_time": "2023-06-15T10:17:55Z",
+      "successful": true,
+      "confidence_score": 0.88,
+      "correction_details": {
+        "task_id": "extract_customer_data",
+        "timeout_limit_before": 3600,
+        "timeout_limit_after": 7200,
+        "parameters": {
+          "strategy": "parameter_adjustment",
+          "parameter_name": "timeout_seconds",
+          "previous_value": 3600,
+          "new_value": 7200
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_012_post",
+        "passed": true,
+        "quality_score_before": 0.0,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "task_id": "extract_customer_data",
+          "task_status_before": "TIMEOUT",
+          "task_status_after": "SUCCESS",
+          "execution_time_seconds": 4250
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 4.1,
+        "memory_usage_mb": 72,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-013",
+      "issue_id": "issue-013",
+      "healing_id": "heal_20230615_013",
+      "execution_id": "exec_20230615_013",
+      "pattern_id": "pattern_dependency_failure_001",
+      "action_id": "action_dependency_resolution_001",
+      "issue_type": "dependency_failure",
+      "correction_strategy": "dependency_resolution",
+      "correction_time": "2023-06-15T10:18:05Z",
+      "successful": true,
+      "confidence_score": 0.86,
+      "correction_details": {
+        "failed_task_id": "extract_inventory_data",
+        "dependent_task_id": "transform_inventory_data",
+        "failure_reason": "API connection timeout",
+        "action_taken": "retry_with_backoff",
+        "parameters": {
+          "strategy": "dependency_resolution",
+          "retry_count": 3,
+          "backoff_factor": 2,
+          "initial_delay_seconds": 30
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_013_post",
+        "passed": true,
+        "quality_score_before": 0.0,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "task_id": "extract_inventory_data",
+          "task_status_before": "FAILED",
+          "task_status_after": "SUCCESS",
+          "retry_attempt": 2
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 185.6,
+        "memory_usage_mb": 108,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-014",
+      "issue_id": "issue-014",
+      "healing_id": "heal_20230615_014",
+      "execution_id": "exec_20230615_014",
+      "pattern_id": "pattern_configuration_error_001",
+      "action_id": "action_configuration_update_001",
+      "issue_type": "configuration_error",
+      "correction_strategy": "configuration_update",
+      "correction_time": "2023-06-15T10:18:15Z",
+      "successful": true,
+      "confidence_score": 0.93,
+      "correction_details": {
+        "parameter_name": "partition_field",
+        "parameter_value_before": "",
+        "parameter_value_after": "created_at",
+        "parameters": {
+          "strategy": "configuration_update",
+          "config_path": "dags/finance_daily.py",
+          "parameter_name": "partition_field",
+          "new_value": "created_at"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_014_post",
+        "passed": true,
+        "quality_score_before": 0.0,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "task_id": "create_finance_table",
+          "task_status_before": "FAILED",
+          "task_status_after": "SUCCESS",
+          "config_validation": "PASSED"
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 2.8,
+        "memory_usage_mb": 64,
+        "execution_mode": "automatic",
+        "approval_required": false
+      }
+    },
+    {
+      "correction_id": "corr-015",
+      "issue_id": "issue-015",
+      "healing_id": "heal_20230615_015",
+      "execution_id": "exec_20230615_015",
+      "pattern_id": "pattern_permission_error_001",
+      "action_id": "action_permission_grant_001",
+      "issue_type": "permission_error",
+      "correction_strategy": "permission_grant",
+      "correction_time": "2023-06-15T10:18:25Z",
+      "successful": true,
+      "confidence_score": 0.91,
+      "correction_details": {
+        "resource_type": "BIGQUERY_DATASET",
+        "resource_name": "vendor_data:vendor_metrics",
+        "required_permission": "bigquery.tables.create",
+        "service_account": "pipeline-sa@project-id.iam.gserviceaccount.com",
+        "parameters": {
+          "strategy": "permission_grant",
+          "role": "roles/bigquery.dataEditor",
+          "principal": "serviceAccount:pipeline-sa@project-id.iam.gserviceaccount.com",
+          "resource": "projects/project-id/datasets/vendor_data"
+        }
+      },
+      "validation_results": {
+        "validation_id": "val_20230615_015_post",
+        "passed": true,
+        "quality_score_before": 0.0,
+        "quality_score_after": 1.0,
+        "validation_details": {
+          "task_id": "create_vendor_metrics",
+          "task_status_before": "FAILED",
+          "task_status_after": "SUCCESS",
+          "permission_check": "GRANTED"
+        }
+      },
+      "execution_details": {
+        "duration_seconds": 8.5,
+        "memory_usage_mb": 78,
+        "execution_mode": "approval_required",
+        "approval_required": true,
+        "approved_by": "security_admin",
+        "approval_time": "2023-06-15T10:18:15Z"
+      }
+    }
+  ]
+}
