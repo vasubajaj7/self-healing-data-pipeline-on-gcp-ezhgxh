@@ -1,0 +1,839 @@
+{
+  "datasetQualitySummaries": [
+    {
+      "dataset": "sales_data",
+      "tables": [
+        {
+          "table": "daily_sales",
+          "qualityScore": 0.98
+        },
+        {
+          "table": "monthly_sales",
+          "qualityScore": 0.95
+        }
+      ],
+      "overallScore": 0.97,
+      "trend": "IMPROVING",
+      "issueCount": 2,
+      "lastUpdated": "2023-06-15T05:12:30.000Z"
+    },
+    {
+      "dataset": "customer_data",
+      "tables": [
+        {
+          "table": "customers",
+          "qualityScore": 0.99
+        }
+      ],
+      "overallScore": 0.99,
+      "trend": "STABLE",
+      "issueCount": 0,
+      "lastUpdated": "2023-06-15T03:08:15.000Z"
+    },
+    {
+      "dataset": "product_data",
+      "tables": [
+        {
+          "table": "products",
+          "qualityScore": 0.92
+        }
+      ],
+      "overallScore": 0.92,
+      "trend": "DECLINING",
+      "issueCount": 2,
+      "lastUpdated": "2023-06-10T01:15:45.000Z"
+    },
+    {
+      "dataset": "inventory_data",
+      "tables": [
+        {
+          "table": "inventory_levels",
+          "qualityScore": 0.85
+        }
+      ],
+      "overallScore": 0.85,
+      "trend": "DECLINING",
+      "issueCount": 1,
+      "lastUpdated": "2023-06-15T02:03:45.000Z"
+    }
+  ],
+  "qualityIssues": [
+    {
+      "issueId": "ISSUE-001",
+      "dataset": "sales_data",
+      "table": "daily_sales",
+      "column": "sale_amount",
+      "ruleId": "RULE-001",
+      "description": "Negative values found in sale_amount column",
+      "dimension": "ACCURACY",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "affectedRows": 15,
+      "detectedAt": "2023-06-15T01:30:00.000Z",
+      "healingStatus": "IN_PROGRESS",
+      "details": {
+        "min_value": -567.89,
+        "example_values": [-567.89, -128.45, -42.20],
+        "suggestion": "Review transactions with negative amounts or apply absolute value transformation"
+      }
+    },
+    {
+      "issueId": "ISSUE-002",
+      "dataset": "sales_data", 
+      "table": "monthly_sales",
+      "column": "region_id",
+      "ruleId": "RULE-005",
+      "description": "Invalid region_id values detected",
+      "dimension": "CONSISTENCY",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "affectedRows": 8,
+      "detectedAt": "2023-06-14T22:15:00.000Z",
+      "healingStatus": "PLANNED",
+      "details": {
+        "invalid_values": ["R99", "R0", "UNKNOWN"],
+        "expected_pattern": "R[1-9][0-9]?",
+        "suggestion": "Map invalid values to correct region codes"
+      }
+    },
+    {
+      "issueId": "ISSUE-003",
+      "dataset": "product_data",
+      "table": "products",
+      "column": "price",
+      "ruleId": "RULE-002",
+      "description": "Outlier values detected in price column",
+      "dimension": "ACCURACY",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "affectedRows": 3,
+      "detectedAt": "2023-06-10T00:45:00.000Z",
+      "healingStatus": "PLANNED",
+      "details": {
+        "outlier_values": [9999.99, 8888.88, 7777.77],
+        "normal_range": [10.00, 1000.00],
+        "suggestion": "Verify pricing or adjust outlier threshold for premium products"
+      }
+    },
+    {
+      "issueId": "ISSUE-004",
+      "dataset": "product_data",
+      "table": "products",
+      "column": "description",
+      "ruleId": "RULE-008",
+      "description": "Missing values in description column",
+      "dimension": "COMPLETENESS",
+      "severity": "LOW",
+      "status": "OPEN",
+      "affectedRows": 12,
+      "detectedAt": "2023-06-09T14:20:00.000Z",
+      "healingStatus": "NOT_STARTED",
+      "details": {
+        "null_percentage": 4.5,
+        "affected_product_categories": ["accessories", "seasonal"],
+        "suggestion": "Generate descriptions using product metadata or AI"
+      }
+    },
+    {
+      "issueId": "ISSUE-005",
+      "dataset": "inventory_data",
+      "table": "inventory_levels",
+      "column": "quantity",
+      "ruleId": "RULE-003",
+      "description": "Negative inventory quantities detected",
+      "dimension": "ACCURACY",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "affectedRows": 0,
+      "detectedAt": "2023-06-08T10:30:00.000Z",
+      "healingStatus": "COMPLETED",
+      "details": {
+        "previous_affected_count": 5,
+        "correction_method": "Set to zero and flag for review",
+        "correction_time": "2023-06-08T11:15:00.000Z",
+        "correction_by": "Self-healing system"
+      }
+    }
+  ],
+  "qualityRules": [
+    {
+      "ruleId": "RULE-001",
+      "name": "Positive Sale Amount",
+      "description": "Validates that all sale amounts are positive values",
+      "dataset": "sales_data",
+      "table": "daily_sales",
+      "column": "sale_amount",
+      "ruleType": "VALUE_RANGE",
+      "dimension": "ACCURACY",
+      "severity": "HIGH",
+      "isActive": true,
+      "parameters": {
+        "min": 0,
+        "includeMin": true
+      },
+      "createdAt": "2023-01-15T10:00:00.000Z",
+      "updatedAt": "2023-01-15T10:00:00.000Z",
+      "createdBy": "data.engineer@example.com"
+    },
+    {
+      "ruleId": "RULE-002",
+      "name": "Product Price Range",
+      "description": "Validates that product prices fall within expected range",
+      "dataset": "product_data",
+      "table": "products",
+      "column": "price",
+      "ruleType": "VALUE_RANGE",
+      "dimension": "ACCURACY",
+      "severity": "MEDIUM",
+      "isActive": true,
+      "parameters": {
+        "min": 0.01,
+        "max": 1000.00,
+        "includeMin": true,
+        "includeMax": true
+      },
+      "createdAt": "2023-01-20T14:30:00.000Z",
+      "updatedAt": "2023-03-15T11:20:00.000Z",
+      "createdBy": "data.engineer@example.com"
+    },
+    {
+      "ruleId": "RULE-003",
+      "name": "Non-Negative Inventory",
+      "description": "Ensures inventory quantities are not negative",
+      "dataset": "inventory_data",
+      "table": "inventory_levels",
+      "column": "quantity",
+      "ruleType": "VALUE_RANGE",
+      "dimension": "ACCURACY",
+      "severity": "HIGH",
+      "isActive": true,
+      "parameters": {
+        "min": 0,
+        "includeMin": true
+      },
+      "createdAt": "2023-02-05T09:15:00.000Z",
+      "updatedAt": "2023-02-05T09:15:00.000Z",
+      "createdBy": "inventory.manager@example.com"
+    },
+    {
+      "ruleId": "RULE-004",
+      "name": "Customer Email Format",
+      "description": "Validates email format in customer records",
+      "dataset": "customer_data",
+      "table": "customers",
+      "column": "email",
+      "ruleType": "REGEX_PATTERN",
+      "dimension": "CONSISTENCY",
+      "severity": "MEDIUM",
+      "isActive": true,
+      "parameters": {
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      },
+      "createdAt": "2023-01-10T16:45:00.000Z",
+      "updatedAt": "2023-01-10T16:45:00.000Z",
+      "createdBy": "data.engineer@example.com"
+    },
+    {
+      "ruleId": "RULE-005",
+      "name": "Valid Region ID",
+      "description": "Validates region ID format",
+      "dataset": "sales_data",
+      "table": "monthly_sales",
+      "column": "region_id",
+      "ruleType": "REGEX_PATTERN",
+      "dimension": "CONSISTENCY",
+      "severity": "MEDIUM",
+      "isActive": true,
+      "parameters": {
+        "pattern": "R[1-9][0-9]?"
+      },
+      "createdAt": "2023-02-18T13:20:00.000Z",
+      "updatedAt": "2023-02-18T13:20:00.000Z",
+      "createdBy": "sales.analyst@example.com"
+    },
+    {
+      "ruleId": "RULE-006",
+      "name": "Product ID Present",
+      "description": "Ensures product ID is never null",
+      "dataset": "product_data",
+      "table": "products",
+      "column": "product_id",
+      "ruleType": "NOT_NULL",
+      "dimension": "COMPLETENESS",
+      "severity": "CRITICAL",
+      "isActive": true,
+      "parameters": {},
+      "createdAt": "2023-01-05T11:30:00.000Z",
+      "updatedAt": "2023-01-05T11:30:00.000Z",
+      "createdBy": "system.admin@example.com"
+    },
+    {
+      "ruleId": "RULE-007",
+      "name": "Unique Customer ID",
+      "description": "Validates customer IDs are unique",
+      "dataset": "customer_data",
+      "table": "customers",
+      "column": "customer_id",
+      "ruleType": "UNIQUENESS",
+      "dimension": "UNIQUENESS",
+      "severity": "CRITICAL",
+      "isActive": true,
+      "parameters": {},
+      "createdAt": "2023-01-08T10:15:00.000Z",
+      "updatedAt": "2023-01-08T10:15:00.000Z",
+      "createdBy": "system.admin@example.com"
+    },
+    {
+      "ruleId": "RULE-008",
+      "name": "Product Description Required",
+      "description": "Ensures product descriptions are not missing",
+      "dataset": "product_data",
+      "table": "products",
+      "column": "description",
+      "ruleType": "NOT_NULL",
+      "dimension": "COMPLETENESS",
+      "severity": "LOW",
+      "isActive": true,
+      "parameters": {},
+      "createdAt": "2023-03-10T15:45:00.000Z",
+      "updatedAt": "2023-03-10T15:45:00.000Z",
+      "createdBy": "product.manager@example.com"
+    }
+  ],
+  "qualityTimeSeries": {
+    "timeRange": "30d",
+    "startDate": "2023-05-15T00:00:00.000Z",
+    "endDate": "2023-06-15T00:00:00.000Z",
+    "overallScores": [
+      {"date": "2023-05-15", "score": 0.91},
+      {"date": "2023-05-16", "score": 0.92},
+      {"date": "2023-05-17", "score": 0.92},
+      {"date": "2023-05-18", "score": 0.93},
+      {"date": "2023-05-19", "score": 0.91},
+      {"date": "2023-05-20", "score": 0.90},
+      {"date": "2023-05-21", "score": 0.92},
+      {"date": "2023-05-22", "score": 0.93},
+      {"date": "2023-05-23", "score": 0.94},
+      {"date": "2023-05-24", "score": 0.95},
+      {"date": "2023-05-25", "score": 0.95},
+      {"date": "2023-05-26", "score": 0.96},
+      {"date": "2023-05-27", "score": 0.96},
+      {"date": "2023-05-28", "score": 0.95},
+      {"date": "2023-05-29", "score": 0.94},
+      {"date": "2023-05-30", "score": 0.93},
+      {"date": "2023-05-31", "score": 0.94},
+      {"date": "2023-06-01", "score": 0.95},
+      {"date": "2023-06-02", "score": 0.96},
+      {"date": "2023-06-03", "score": 0.97},
+      {"date": "2023-06-04", "score": 0.97},
+      {"date": "2023-06-05", "score": 0.96},
+      {"date": "2023-06-06", "score": 0.95},
+      {"date": "2023-06-07", "score": 0.94},
+      {"date": "2023-06-08", "score": 0.93},
+      {"date": "2023-06-09", "score": 0.92},
+      {"date": "2023-06-10", "score": 0.92},
+      {"date": "2023-06-11", "score": 0.93},
+      {"date": "2023-06-12", "score": 0.94},
+      {"date": "2023-06-13", "score": 0.95},
+      {"date": "2023-06-14", "score": 0.94},
+      {"date": "2023-06-15", "score": 0.93}
+    ],
+    "dimensionScores": {
+      "COMPLETENESS": [
+        {"date": "2023-05-15", "score": 0.95},
+        {"date": "2023-05-31", "score": 0.96},
+        {"date": "2023-06-15", "score": 0.97}
+      ],
+      "ACCURACY": [
+        {"date": "2023-05-15", "score": 0.88},
+        {"date": "2023-05-31", "score": 0.90},
+        {"date": "2023-06-15", "score": 0.89}
+      ],
+      "CONSISTENCY": [
+        {"date": "2023-05-15", "score": 0.92},
+        {"date": "2023-05-31", "score": 0.94},
+        {"date": "2023-06-15", "score": 0.95}
+      ],
+      "TIMELINESS": [
+        {"date": "2023-05-15", "score": 0.90},
+        {"date": "2023-05-31", "score": 0.92},
+        {"date": "2023-06-15", "score": 0.94}
+      ],
+      "UNIQUENESS": [
+        {"date": "2023-05-15", "score": 0.98},
+        {"date": "2023-05-31", "score": 0.98},
+        {"date": "2023-06-15", "score": 0.99}
+      ]
+    }
+  },
+  "columnQualityDetails": [
+    {
+      "dataset": "sales_data",
+      "table": "daily_sales",
+      "column": "sale_amount",
+      "dataType": "NUMERIC",
+      "nullPercentage": 0.05,
+      "uniquePercentage": 89.2,
+      "statistics": {
+        "min": -567.89,
+        "max": 9999.99,
+        "mean": 245.67,
+        "median": 125.50,
+        "stdDev": 342.18
+      },
+      "topValues": [
+        {"value": "99.99", "count": 120},
+        {"value": "49.99", "count": 85},
+        {"value": "149.99", "count": 62},
+        {"value": "199.99", "count": 45},
+        {"value": "9.99", "count": 38}
+      ],
+      "qualityIssues": [
+        {
+          "issueId": "ISSUE-001",
+          "description": "Negative values found in sale_amount column",
+          "severity": "HIGH",
+          "status": "OPEN"
+        }
+      ],
+      "appliedRules": [
+        {
+          "ruleId": "RULE-001",
+          "name": "Positive Sale Amount",
+          "status": "FAILING"
+        }
+      ]
+    },
+    {
+      "dataset": "product_data",
+      "table": "products",
+      "column": "price",
+      "dataType": "NUMERIC",
+      "nullPercentage": 0.0,
+      "uniquePercentage": 56.8,
+      "statistics": {
+        "min": 1.99,
+        "max": 9999.99,
+        "mean": 124.35,
+        "median": 89.99,
+        "stdDev": 243.78
+      },
+      "topValues": [
+        {"value": "9.99", "count": 210},
+        {"value": "19.99", "count": 185},
+        {"value": "29.99", "count": 142},
+        {"value": "49.99", "count": 98},
+        {"value": "99.99", "count": 76}
+      ],
+      "qualityIssues": [
+        {
+          "issueId": "ISSUE-003",
+          "description": "Outlier values detected in price column",
+          "severity": "MEDIUM",
+          "status": "OPEN"
+        }
+      ],
+      "appliedRules": [
+        {
+          "ruleId": "RULE-002",
+          "name": "Product Price Range",
+          "status": "FAILING"
+        }
+      ]
+    },
+    {
+      "dataset": "customer_data",
+      "table": "customers",
+      "column": "email",
+      "dataType": "STRING",
+      "nullPercentage": 0.02,
+      "uniquePercentage": 99.99,
+      "statistics": {
+        "minLength": 10,
+        "maxLength": 64,
+        "avgLength": 28.5,
+        "emptyCount": 0
+      },
+      "topValues": [
+        {"value": "gmail.com", "count": 4250, "type": "domain"},
+        {"value": "yahoo.com", "count": 1830, "type": "domain"},
+        {"value": "hotmail.com", "count": 1425, "type": "domain"},
+        {"value": "outlook.com", "count": 980, "type": "domain"},
+        {"value": "example.com", "count": 615, "type": "domain"}
+      ],
+      "qualityIssues": [],
+      "appliedRules": [
+        {
+          "ruleId": "RULE-004",
+          "name": "Customer Email Format",
+          "status": "PASSING"
+        }
+      ]
+    }
+  ],
+  "qualityStatistics": {
+    "totalDatasets": 4,
+    "totalTables": 5,
+    "totalRules": 8,
+    "activeRules": 8,
+    "validationsLast24h": 120,
+    "validationsLast7d": 840,
+    "validationsLast30d": 3600,
+    "successRateLast24h": 95.8,
+    "successRateLast7d": 94.2,
+    "successRateLast30d": 93.5,
+    "openIssues": 4,
+    "issuesByDimension": {
+      "ACCURACY": 3,
+      "COMPLETENESS": 1,
+      "CONSISTENCY": 1,
+      "TIMELINESS": 0,
+      "UNIQUENESS": 0
+    },
+    "issuesBySeverity": {
+      "CRITICAL": 0,
+      "HIGH": 2,
+      "MEDIUM": 2,
+      "LOW": 1
+    },
+    "selfHealingSuccessRate": 87.5
+  },
+  "qualityRuleTemplates": [
+    {
+      "templateId": "TEMPLATE-001",
+      "name": "Not Null Check",
+      "description": "Validates that a column contains no null values",
+      "ruleType": "NOT_NULL",
+      "dimension": "COMPLETENESS",
+      "templateDefinition": {
+        "validation_expression": "COUNT(WHERE ${column} IS NULL) = 0"
+      },
+      "requiredParameters": [],
+      "optionalParameters": [
+        {
+          "name": "threshold",
+          "type": "FLOAT",
+          "description": "Maximum percentage of nulls allowed (0-1)",
+          "default": 0
+        }
+      ],
+      "applicableDataTypes": ["ANY"],
+      "exampleUsage": {
+        "dataset": "example_dataset",
+        "table": "example_table",
+        "column": "id",
+        "parameters": {}
+      }
+    },
+    {
+      "templateId": "TEMPLATE-002",
+      "name": "Value Range Check",
+      "description": "Validates that numeric values fall within a specified range",
+      "ruleType": "VALUE_RANGE",
+      "dimension": "ACCURACY",
+      "templateDefinition": {
+        "validation_expression": "COUNT(WHERE ${column} < ${min} OR ${column} > ${max}) = 0"
+      },
+      "requiredParameters": [
+        {
+          "name": "min",
+          "type": "FLOAT",
+          "description": "Minimum allowed value"
+        },
+        {
+          "name": "max",
+          "type": "FLOAT",
+          "description": "Maximum allowed value"
+        }
+      ],
+      "optionalParameters": [
+        {
+          "name": "includeMin",
+          "type": "BOOLEAN",
+          "description": "Whether minimum value is inclusive",
+          "default": true
+        },
+        {
+          "name": "includeMax",
+          "type": "BOOLEAN",
+          "description": "Whether maximum value is inclusive",
+          "default": true
+        }
+      ],
+      "applicableDataTypes": ["INTEGER", "FLOAT", "NUMERIC"],
+      "exampleUsage": {
+        "dataset": "sales_data",
+        "table": "transactions",
+        "column": "amount",
+        "parameters": {
+          "min": 0,
+          "max": 10000,
+          "includeMin": true,
+          "includeMax": true
+        }
+      }
+    },
+    {
+      "templateId": "TEMPLATE-003",
+      "name": "Regex Pattern Match",
+      "description": "Validates that string values match a specified regex pattern",
+      "ruleType": "REGEX_PATTERN",
+      "dimension": "CONSISTENCY",
+      "templateDefinition": {
+        "validation_expression": "COUNT(WHERE NOT REGEXP_MATCH(${column}, '${pattern}')) = 0"
+      },
+      "requiredParameters": [
+        {
+          "name": "pattern",
+          "type": "STRING",
+          "description": "Regular expression pattern to match"
+        }
+      ],
+      "optionalParameters": [],
+      "applicableDataTypes": ["STRING"],
+      "exampleUsage": {
+        "dataset": "customer_data",
+        "table": "customers",
+        "column": "email",
+        "parameters": {
+          "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        }
+      }
+    },
+    {
+      "templateId": "TEMPLATE-004",
+      "name": "Uniqueness Check",
+      "description": "Validates that values in a column are unique",
+      "ruleType": "UNIQUENESS",
+      "dimension": "UNIQUENESS",
+      "templateDefinition": {
+        "validation_expression": "COUNT(DISTINCT ${column}) = COUNT(*)"
+      },
+      "requiredParameters": [],
+      "optionalParameters": [],
+      "applicableDataTypes": ["ANY"],
+      "exampleUsage": {
+        "dataset": "product_data",
+        "table": "products",
+        "column": "product_id",
+        "parameters": {}
+      }
+    }
+  ],
+  "qualityValidationResults": [
+    {
+      "validationId": "VAL-00123",
+      "ruleId": "RULE-001",
+      "dataset": "sales_data",
+      "table": "daily_sales",
+      "executionTime": 5.2,
+      "recordsProcessed": 10000,
+      "failedRecords": 15,
+      "sampleFailures": [
+        {"row_id": "R1001", "value": -567.89},
+        {"row_id": "R1042", "value": -128.45},
+        {"row_id": "R1098", "value": -42.20}
+      ],
+      "healingAttempted": true,
+      "healingSuccessful": false,
+      "healingDetails": {
+        "failureReason": "Business logic requires manual review of negative sales",
+        "recommendation": "Flag transactions for finance team review"
+      }
+    },
+    {
+      "validationId": "VAL-00124",
+      "ruleId": "RULE-002",
+      "dataset": "product_data",
+      "table": "products",
+      "executionTime": 3.8,
+      "recordsProcessed": 5000,
+      "failedRecords": 3,
+      "sampleFailures": [
+        {"row_id": "P5002", "value": 9999.99},
+        {"row_id": "P5010", "value": 8888.88},
+        {"row_id": "P5011", "value": 7777.77}
+      ],
+      "healingAttempted": false,
+      "healingSuccessful": false,
+      "healingDetails": null
+    },
+    {
+      "validationId": "VAL-00125",
+      "ruleId": "RULE-003",
+      "dataset": "inventory_data",
+      "table": "inventory_levels",
+      "executionTime": 2.5,
+      "recordsProcessed": 3000,
+      "failedRecords": 0,
+      "sampleFailures": [],
+      "healingAttempted": true,
+      "healingSuccessful": true,
+      "healingDetails": {
+        "correctionMethod": "Set to zero and flag for review",
+        "correctedRecords": 5,
+        "timestamp": "2023-06-08T11:15:00.000Z"
+      }
+    },
+    {
+      "validationId": "VAL-00126",
+      "ruleId": "RULE-004",
+      "dataset": "customer_data",
+      "table": "customers",
+      "executionTime": 6.7,
+      "recordsProcessed": 15000,
+      "failedRecords": 0,
+      "sampleFailures": [],
+      "healingAttempted": false,
+      "healingSuccessful": false,
+      "healingDetails": null
+    }
+  ],
+  "apiResponses": {
+    "createQualityRule": {
+      "success": true,
+      "ruleId": "RULE-009",
+      "message": "Rule created successfully"
+    },
+    "updateQualityRule": {
+      "success": true,
+      "ruleId": "RULE-002",
+      "message": "Rule updated successfully"
+    },
+    "deleteQualityRule": {
+      "success": true,
+      "message": "Rule deleted successfully"
+    },
+    "getQualityIssues": {
+      "success": true,
+      "total": 5,
+      "page": 1,
+      "pageSize": 10,
+      "message": "Issues retrieved successfully"
+    },
+    "getQualityRules": {
+      "success": true,
+      "total": 8,
+      "page": 1,
+      "pageSize": 20,
+      "message": "Rules retrieved successfully"
+    },
+    "getQualityStatistics": {
+      "success": true,
+      "message": "Statistics retrieved successfully"
+    }
+  },
+  "qualityDimensions": [
+    {
+      "value": "COMPLETENESS",
+      "label": "Completeness",
+      "description": "Measures the presence of required data elements"
+    },
+    {
+      "value": "ACCURACY",
+      "label": "Accuracy",
+      "description": "Measures how closely data values reflect reality"
+    },
+    {
+      "value": "CONSISTENCY",
+      "label": "Consistency",
+      "description": "Measures adherence to defined formats and patterns"
+    },
+    {
+      "value": "TIMELINESS",
+      "label": "Timeliness",
+      "description": "Measures data availability within expected timeframes"
+    },
+    {
+      "value": "UNIQUENESS",
+      "label": "Uniqueness",
+      "description": "Measures the absence of duplicates and proper identification"
+    }
+  ],
+  "qualityRuleTypes": [
+    {
+      "value": "NOT_NULL",
+      "label": "Not Null",
+      "description": "Validates that a column contains no null values"
+    },
+    {
+      "value": "VALUE_RANGE",
+      "label": "Value Range",
+      "description": "Validates that numeric values fall within a specified range"
+    },
+    {
+      "value": "REGEX_PATTERN",
+      "label": "Regex Pattern",
+      "description": "Validates that string values match a specified regex pattern"
+    },
+    {
+      "value": "UNIQUENESS",
+      "label": "Uniqueness",
+      "description": "Validates that values in a column are unique"
+    },
+    {
+      "value": "REFERENTIAL_INTEGRITY",
+      "label": "Referential Integrity",
+      "description": "Validates that values exist in a reference table"
+    },
+    {
+      "value": "STATISTICAL",
+      "label": "Statistical",
+      "description": "Validates statistical properties of data distribution"
+    }
+  ],
+  "qualityIssueStatuses": [
+    {
+      "value": "OPEN",
+      "label": "Open",
+      "color": "#f44336"
+    },
+    {
+      "value": "IN_PROGRESS",
+      "label": "In Progress",
+      "color": "#ff9800"
+    },
+    {
+      "value": "PLANNED",
+      "label": "Planned",
+      "color": "#2196f3"
+    },
+    {
+      "value": "CLOSED",
+      "label": "Closed",
+      "color": "#4caf50"
+    },
+    {
+      "value": "IGNORED",
+      "label": "Ignored",
+      "color": "#9e9e9e"
+    }
+  ],
+  "severityLevels": [
+    {
+      "value": "CRITICAL",
+      "label": "Critical",
+      "color": "#d32f2f"
+    },
+    {
+      "value": "HIGH",
+      "label": "High",
+      "color": "#f44336"
+    },
+    {
+      "value": "MEDIUM",
+      "label": "Medium",
+      "color": "#ff9800"
+    },
+    {
+      "value": "LOW",
+      "label": "Low",
+      "color": "#ffeb3b"
+    },
+    {
+      "value": "INFO",
+      "label": "Info",
+      "color": "#2196f3"
+    }
+  ]
+}
