@@ -1,0 +1,70 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Specify the base resources to be extended
+resources:
+  - ./configs.yaml
+  - ./ingress.yaml
+
+# Apply staging-specific patches to deployments
+patches:
+  - ./deployment-patches.yaml
+
+# Set namespace for all resources
+namespace: self-healing-pipeline-staging
+
+# Add common labels to all resources
+commonLabels:
+  environment: staging
+  tier: pre-production
+
+# Generate ConfigMaps with staging-specific values
+configMapGenerator:
+  - name: pipeline-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=info
+      - GCP_PROJECT_ID=self-healing-pipeline-staging
+      - GCP_REGION=us-central1
+      - BIGQUERY_DATASET=self_healing_pipeline_staging
+      - GCS_BUCKET=self-healing-pipeline-staging-data
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+      - ENABLE_PROFILING=false
+  - name: feature-flags
+    behavior: create
+    literals:
+      - ENABLE_EXPERIMENTAL_FEATURES=false
+      - ENABLE_DEBUG_TOOLS=false
+      - ENABLE_MOCK_DATA=false
+      - ENABLE_AI_PREDICTIONS=true
+      - ENABLE_ADVANCED_MONITORING=true
+
+# Generate Secrets with staging-specific values
+secretGenerator:
+  - name: staging-credentials
+    files:
+      - key.json=secrets/staging-service-account-key.json
+  - name: database-credentials
+    behavior: merge
+    literals:
+      - CLOUDSQL_USER=pipeline_staging_user
+      - CLOUDSQL_CONNECTION_NAME=self-healing-pipeline-staging:us-central1:pipeline-db-staging
+    type: Opaque
+
+# Configure replica counts for high availability testing
+replicas:
+  - name: backend-deployment
+    count: 2
+  - name: web-deployment
+    count: 2
+
+# Update container image references for staging
+images:
+  - name: gcr.io/${PROJECT_ID}/self-healing-pipeline/backend
+    newName: gcr.io/self-healing-pipeline-staging/self-healing-pipeline/backend
+    newTag: staging
+  - name: gcr.io/${PROJECT_ID}/self-healing-pipeline/web
+    newName: gcr.io/self-healing-pipeline-staging/self-healing-pipeline/web
+    newTag: staging
