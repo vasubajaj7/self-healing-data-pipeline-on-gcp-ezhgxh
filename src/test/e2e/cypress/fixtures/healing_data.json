@@ -1,0 +1,1089 @@
+{
+  "healingIssues": [
+    {
+      "issueId": "issue-001",
+      "issueCategory": "data_quality",
+      "issueType": "outliers",
+      "pipelineId": "sales_metrics",
+      "dataset": "sales_data",
+      "table": "daily_sales",
+      "column": "value",
+      "description": "Values exceeding the maximum threshold of 100.0",
+      "detectionTime": "2023-06-15T10:15:05Z",
+      "severity": "MEDIUM",
+      "details": {
+        "ruleId": "rule_006",
+        "validationId": "val_20230615_001",
+        "expectedMax": 100.0,
+        "unexpectedValues": [105.2, 110.5, 103.7, 101.2, 102.8],
+        "unexpectedCount": 5,
+        "unexpectedPercent": 1.0,
+        "totalRecords": 500
+      },
+      "context": {
+        "executionId": "exec_20230615_001",
+        "taskId": "validate_sales_data",
+        "environment": "production"
+      },
+      "potentialActions": ["capping", "removal", "scaling"],
+      "healingStatus": "COMPLETED"
+    },
+    {
+      "issueId": "issue-002",
+      "issueCategory": "data_quality",
+      "issueType": "format_errors",
+      "pipelineId": "customer_data",
+      "dataset": "customer_profiles",
+      "table": "customer_activity",
+      "column": "timestamp",
+      "description": "Invalid date format detected in timestamp column",
+      "detectionTime": "2023-06-15T10:15:15Z",
+      "severity": "HIGH",
+      "details": {
+        "ruleId": "rule_008",
+        "validationId": "val_20230615_002",
+        "expectedFormat": "ISO-8601",
+        "unexpectedValues": ["invalid-date", "2023/13/45", "not-a-date"],
+        "unexpectedCount": 3,
+        "unexpectedPercent": 0.6,
+        "totalRecords": 500
+      },
+      "context": {
+        "executionId": "exec_20230615_002",
+        "taskId": "validate_customer_activity",
+        "environment": "production"
+      },
+      "potentialActions": ["standardization", "removal"],
+      "healingStatus": "COMPLETED"
+    },
+    {
+      "issueId": "issue-005",
+      "issueCategory": "data_quality",
+      "issueType": "referential_integrity",
+      "pipelineId": "sales_metrics",
+      "dataset": "sales_data",
+      "table": "transactions",
+      "column": "id",
+      "description": "Duplicate IDs detected in primary key column",
+      "detectionTime": "2023-06-15T10:15:45Z",
+      "severity": "CRITICAL",
+      "details": {
+        "ruleId": "rule_014",
+        "validationId": "val_20230615_005",
+        "unexpectedValues": ["DUP001", "DUP002", "DUP003"],
+        "unexpectedCount": 6,
+        "unexpectedPercent": 1.2,
+        "totalRecords": 500
+      },
+      "context": {
+        "executionId": "exec_20230615_005",
+        "taskId": "validate_transactions",
+        "environment": "production"
+      },
+      "potentialActions": ["deduplication", "row_removal"],
+      "healingStatus": "COMPLETED"
+    },
+    {
+      "issueId": "issue-009",
+      "issueCategory": "data_quality",
+      "issueType": "referential_integrity",
+      "pipelineId": "product_enrich",
+      "dataset": "product_catalog",
+      "table": "product_details",
+      "column": "category_id",
+      "description": "Foreign key values not found in reference table",
+      "detectionTime": "2023-06-15T10:16:25Z",
+      "severity": "HIGH",
+      "details": {
+        "ruleId": "rule_018",
+        "validationId": "val_20230615_009",
+        "referenceTable": "categories",
+        "referenceColumn": "id",
+        "unexpectedValues": [101, 102, 103],
+        "unexpectedCount": 3,
+        "unexpectedPercent": 0.6,
+        "totalRecords": 500
+      },
+      "context": {
+        "executionId": "exec_20230615_009",
+        "taskId": "validate_product_details",
+        "environment": "production"
+      },
+      "potentialActions": ["reference_repair", "removal"],
+      "healingStatus": "FAILED"
+    },
+    {
+      "issueId": "issue-011",
+      "issueCategory": "pipeline",
+      "issueType": "resource_exhaustion",
+      "pipelineId": "analytics_daily",
+      "dataset": null,
+      "table": null,
+      "column": null,
+      "description": "BigQuery slots exhausted during query execution",
+      "detectionTime": "2023-06-15T10:16:45Z",
+      "severity": "CRITICAL",
+      "details": {
+        "errorMessage": "Quota exceeded: Your project exceeded quota for free query bytes scanned.",
+        "jobId": "project:region:job_20230615_001",
+        "resourceType": "BIGQUERY_SLOTS",
+        "currentUsage": 2000,
+        "limit": 2000
+      },
+      "context": {
+        "executionId": "exec_20230615_011",
+        "taskId": "aggregate_daily_metrics",
+        "environment": "production"
+      },
+      "potentialActions": ["resource_scaling", "query_optimization", "job_scheduling"],
+      "healingStatus": "COMPLETED"
+    },
+    {
+      "issueId": "issue-015",
+      "issueCategory": "pipeline",
+      "issueType": "permission_error",
+      "pipelineId": "vendor_data",
+      "dataset": null,
+      "table": null,
+      "column": null,
+      "description": "Insufficient permissions to access BigQuery dataset",
+      "detectionTime": "2023-06-15T10:17:25Z",
+      "severity": "HIGH",
+      "details": {
+        "errorMessage": "Access Denied: Dataset vendor_data:vendor_metrics: Permission bigquery.tables.create denied on dataset vendor_data:vendor_metrics",
+        "resourceType": "BIGQUERY_DATASET",
+        "resourceName": "vendor_data:vendor_metrics",
+        "requiredPermission": "bigquery.tables.create",
+        "serviceAccount": "pipeline-sa@project-id.iam.gserviceaccount.com"
+      },
+      "context": {
+        "executionId": "exec_20230615_015",
+        "taskId": "create_vendor_metrics",
+        "environment": "production"
+      },
+      "potentialActions": ["permission_grant", "service_account_update"],
+      "healingStatus": "PENDING_APPROVAL"
+    }
+  ],
+  "healingActions": [
+    {
+      "actionId": "corr-001",
+      "issueId": "issue-001",
+      "healingId": "heal_20230615_001",
+      "executionId": "exec_20230615_001",
+      "patternId": "pattern_outliers_001",
+      "issueType": "outliers",
+      "correctionStrategy": "winsorization",
+      "correctionTime": "2023-06-15T10:16:05Z",
+      "successful": true,
+      "confidenceScore": 0.92,
+      "correctionDetails": {
+        "dataset": "sales_data",
+        "table": "daily_sales",
+        "column": "value",
+        "affectedRows": 5,
+        "valuesBefore": [105.2, 110.5, 103.7, 101.2, 102.8],
+        "valuesAfter": [100.0, 100.0, 100.0, 100.0, 100.0],
+        "parameters": {
+          "strategy": "winsorization",
+          "limits": [0.05, 0.05],
+          "maxValue": 100.0
+        }
+      },
+      "validationResults": {
+        "validationId": "val_20230615_001_post",
+        "passed": true,
+        "qualityScoreBefore": 0.95,
+        "qualityScoreAfter": 1.0,
+        "validationDetails": {
+          "ruleId": "rule_006",
+          "unexpectedCountBefore": 5,
+          "unexpectedCountAfter": 0,
+          "unexpectedPercentBefore": 1.0,
+          "unexpectedPercentAfter": 0.0
+        }
+      },
+      "executionDetails": {
+        "durationSeconds": 3.2,
+        "memoryUsageMb": 128,
+        "executionMode": "automatic",
+        "approvalRequired": false
+      },
+      "status": "COMPLETED"
+    },
+    {
+      "actionId": "corr-002",
+      "issueId": "issue-002",
+      "healingId": "heal_20230615_002",
+      "executionId": "exec_20230615_002",
+      "patternId": "pattern_format_errors_001",
+      "issueType": "format_errors",
+      "correctionStrategy": "date_format_correction",
+      "correctionTime": "2023-06-15T10:16:15Z",
+      "successful": true,
+      "confidenceScore": 0.88,
+      "correctionDetails": {
+        "dataset": "customer_profiles",
+        "table": "customer_activity",
+        "column": "timestamp",
+        "affectedRows": 3,
+        "valuesBefore": ["invalid-date", "2023/13/45", "not-a-date"],
+        "valuesAfter": [null, "2023-01-01T00:00:00Z", null],
+        "parameters": {
+          "strategy": "date_format_correction",
+          "targetFormat": "ISO-8601",
+          "handleUnparseable": "nullify"
+        }
+      },
+      "validationResults": {
+        "validationId": "val_20230615_002_post",
+        "passed": true,
+        "qualityScoreBefore": 0.94,
+        "qualityScoreAfter": 1.0,
+        "validationDetails": {
+          "ruleId": "rule_008",
+          "unexpectedCountBefore": 3,
+          "unexpectedCountAfter": 0,
+          "unexpectedPercentBefore": 0.6,
+          "unexpectedPercentAfter": 0.0
+        }
+      },
+      "executionDetails": {
+        "durationSeconds": 2.8,
+        "memoryUsageMb": 112,
+        "executionMode": "automatic",
+        "approvalRequired": false
+      },
+      "status": "COMPLETED"
+    },
+    {
+      "actionId": "corr-005",
+      "issueId": "issue-005",
+      "healingId": "heal_20230615_005",
+      "executionId": "exec_20230615_005",
+      "patternId": "pattern_referential_integrity_001",
+      "issueType": "referential_integrity",
+      "correctionStrategy": "deduplication",
+      "correctionTime": "2023-06-15T10:16:45Z",
+      "successful": true,
+      "confidenceScore": 0.78,
+      "correctionDetails": {
+        "dataset": "sales_data",
+        "table": "transactions",
+        "column": "id",
+        "affectedRows": 6,
+        "duplicateIds": ["DUP001", "DUP002", "DUP003"],
+        "resolutionStrategy": "keep_first",
+        "parameters": {
+          "strategy": "deduplication",
+          "method": "keep_first",
+          "identifyBy": "id"
+        }
+      },
+      "validationResults": {
+        "validationId": "val_20230615_005_post",
+        "passed": true,
+        "qualityScoreBefore": 0.85,
+        "qualityScoreAfter": 1.0,
+        "validationDetails": {
+          "ruleId": "rule_014",
+          "unexpectedCountBefore": 6,
+          "unexpectedCountAfter": 0,
+          "unexpectedPercentBefore": 1.2,
+          "unexpectedPercentAfter": 0.0
+        }
+      },
+      "executionDetails": {
+        "durationSeconds": 3.8,
+        "memoryUsageMb": 142,
+        "executionMode": "approval_required",
+        "approvalRequired": true,
+        "approvedBy": "user123",
+        "approvalTime": "2023-06-15T10:16:40Z"
+      },
+      "status": "COMPLETED"
+    },
+    {
+      "actionId": "corr-009",
+      "issueId": "issue-009",
+      "healingId": "heal_20230615_009",
+      "executionId": "exec_20230615_009",
+      "patternId": "pattern_referential_integrity_002",
+      "issueType": "referential_integrity",
+      "correctionStrategy": "reference_repair",
+      "correctionTime": "2023-06-15T10:17:25Z",
+      "successful": false,
+      "confidenceScore": 0.65,
+      "correctionDetails": {
+        "dataset": "product_catalog",
+        "table": "product_details",
+        "column": "category_id",
+        "affectedRows": 3,
+        "valuesBefore": [101, 102, 103],
+        "valuesAfter": [101, 102, 103],
+        "parameters": {
+          "strategy": "reference_repair",
+          "referenceTable": "categories",
+          "referenceColumn": "id",
+          "fallbackAction": "keep_original"
+        }
+      },
+      "validationResults": {
+        "validationId": "val_20230615_009_post",
+        "passed": false,
+        "qualityScoreBefore": 0.89,
+        "qualityScoreAfter": 0.89,
+        "validationDetails": {
+          "ruleId": "rule_018",
+          "unexpectedCountBefore": 3,
+          "unexpectedCountAfter": 3,
+          "unexpectedPercentBefore": 0.6,
+          "unexpectedPercentAfter": 0.6,
+          "failureReason": "Reference values not found and no suitable replacements available"
+        }
+      },
+      "executionDetails": {
+        "durationSeconds": 3.1,
+        "memoryUsageMb": 118,
+        "executionMode": "automatic",
+        "approvalRequired": false,
+        "errorMessage": "Failed to find or create reference values in categories table"
+      },
+      "status": "FAILED"
+    },
+    {
+      "actionId": "corr-011",
+      "issueId": "issue-011",
+      "healingId": "heal_20230615_011",
+      "executionId": "exec_20230615_011",
+      "patternId": "pattern_resource_exhaustion_001",
+      "issueType": "resource_exhaustion",
+      "correctionStrategy": "resource_scaling",
+      "correctionTime": "2023-06-15T10:17:45Z",
+      "successful": true,
+      "confidenceScore": 0.94,
+      "correctionDetails": {
+        "resourceType": "BIGQUERY_SLOTS",
+        "currentUsage": 2000,
+        "limit": 2000,
+        "actionTaken": "increase_reservation",
+        "parameters": {
+          "strategy": "resource_scaling",
+          "reservationName": "analytics-reservation",
+          "previousSlots": 2000,
+          "newSlots": 3000,
+          "durationMinutes": 60
+        }
+      },
+      "validationResults": {
+        "validationId": "val_20230615_011_post",
+        "passed": true,
+        "qualityScoreBefore": 0.0,
+        "qualityScoreAfter": 1.0,
+        "validationDetails": {
+          "jobId": "project:region:job_20230615_001",
+          "jobStatusBefore": "FAILED",
+          "jobStatusAfter": "SUCCESS",
+          "executionTimeSeconds": 145
+        }
+      },
+      "executionDetails": {
+        "durationSeconds": 12.3,
+        "memoryUsageMb": 86,
+        "executionMode": "approval_required",
+        "approvalRequired": true,
+        "approvedBy": "admin789",
+        "approvalTime": "2023-06-15T10:17:35Z"
+      },
+      "status": "COMPLETED"
+    },
+    {
+      "actionId": "corr-015",
+      "issueId": "issue-015",
+      "healingId": "heal_20230615_015",
+      "executionId": "exec_20230615_015",
+      "patternId": "pattern_permission_error_001",
+      "issueType": "permission_error",
+      "correctionStrategy": "permission_grant",
+      "correctionTime": null,
+      "successful": null,
+      "confidenceScore": 0.91,
+      "correctionDetails": {
+        "resourceType": "BIGQUERY_DATASET",
+        "resourceName": "vendor_data:vendor_metrics",
+        "requiredPermission": "bigquery.tables.create",
+        "serviceAccount": "pipeline-sa@project-id.iam.gserviceaccount.com",
+        "parameters": {
+          "strategy": "permission_grant",
+          "role": "roles/bigquery.dataEditor",
+          "principal": "serviceAccount:pipeline-sa@project-id.iam.gserviceaccount.com",
+          "resource": "projects/project-id/datasets/vendor_data"
+        }
+      },
+      "validationResults": null,
+      "executionDetails": {
+        "executionMode": "approval_required",
+        "approvalRequired": true,
+        "approvedBy": null,
+        "approvalTime": null
+      },
+      "status": "PENDING_APPROVAL"
+    }
+  ],
+  "healingModels": [
+    {
+      "modelId": "model-001",
+      "modelName": "anomaly_detect",
+      "modelType": "Detection",
+      "version": "v2.4",
+      "lastUpdated": "2023-06-12T14:30:00Z",
+      "trainingSamples": 1200000,
+      "modelSize": "45 MB",
+      "accuracy": 0.942,
+      "confidence": 0.918,
+      "precision": 0.925,
+      "recall": 0.951,
+      "status": "Active",
+      "applicableTypes": ["outliers", "data_corruption", "schema_drift"],
+      "description": "Anomaly detection model for identifying unusual patterns in data"
+    },
+    {
+      "modelId": "model-002",
+      "modelName": "value_predict",
+      "modelType": "Imputation",
+      "version": "v2.4",
+      "lastUpdated": "2023-06-12T14:30:00Z",
+      "trainingSamples": 1200000,
+      "modelSize": "45 MB",
+      "accuracy": 0.942,
+      "confidence": 0.918,
+      "precision": 0.925,
+      "recall": 0.951,
+      "status": "Active",
+      "applicableTypes": ["missing_values", "outliers"],
+      "description": "Value prediction model for imputing missing values and correcting outliers"
+    },
+    {
+      "modelId": "model-003",
+      "modelName": "pattern_fix",
+      "modelType": "Correction",
+      "version": "v1.8",
+      "lastUpdated": "2023-06-10T09:45:00Z",
+      "trainingSamples": 850000,
+      "modelSize": "38 MB",
+      "accuracy": 0.912,
+      "confidence": 0.895,
+      "precision": 0.908,
+      "recall": 0.923,
+      "status": "Active",
+      "applicableTypes": ["format_errors", "data_corruption", "referential_integrity"],
+      "description": "Pattern-based correction model for fixing common data errors"
+    },
+    {
+      "modelId": "model-004",
+      "modelName": "failure_predict",
+      "modelType": "Prediction",
+      "version": "v0.9",
+      "lastUpdated": "2023-06-14T11:20:00Z",
+      "trainingSamples": 450000,
+      "modelSize": "28 MB",
+      "accuracy": 0.875,
+      "confidence": 0.842,
+      "precision": 0.868,
+      "recall": 0.891,
+      "status": "Training",
+      "applicableTypes": ["resource_exhaustion", "timeout", "dependency_failure"],
+      "description": "Predictive model for anticipating pipeline failures before they occur"
+    },
+    {
+      "modelId": "model-005",
+      "modelName": "schema_evolve",
+      "modelType": "Schema",
+      "version": "v0.5",
+      "lastUpdated": "2023-06-01T16:40:00Z",
+      "trainingSamples": 120000,
+      "modelSize": "15 MB",
+      "accuracy": 0.832,
+      "confidence": 0.805,
+      "precision": 0.845,
+      "recall": 0.812,
+      "status": "Inactive",
+      "applicableTypes": ["schema_drift", "data_corruption"],
+      "description": "Schema evolution model for adapting to changing data structures"
+    }
+  ],
+  "healingStatistics": {
+    "totalIssuesDetected": 1245,
+    "issuesLast24h": 15,
+    "issuesLast7d": 87,
+    "issuesLast30d": 342,
+    "healingActionsTotal": 1182,
+    "healingActionsLast24h": 12,
+    "healingActionsLast7d": 78,
+    "healingActionsLast30d": 315,
+    "successRateOverall": 0.87,
+    "successRateLast24h": 0.92,
+    "successRateLast7d": 0.89,
+    "successRateLast30d": 0.88,
+    "avgConfidenceScore": 0.86,
+    "avgCorrectionTime": 4.2,
+    "issuesByCategory": {
+      "data_quality": 875,
+      "pipeline": 370
+    },
+    "issuesByType": {
+      "outliers": 245,
+      "format_errors": 198,
+      "missing_values": 187,
+      "referential_integrity": 156,
+      "schema_drift": 89,
+      "resource_exhaustion": 125,
+      "timeout": 98,
+      "dependency_failure": 85,
+      "permission_error": 62
+    },
+    "issuesBySeverity": {
+      "CRITICAL": 187,
+      "HIGH": 398,
+      "MEDIUM": 485,
+      "LOW": 175
+    },
+    "successRateTimeSeries": [
+      { "date": "2023-06-08", "value": 0.84 },
+      { "date": "2023-06-09", "value": 0.85 },
+      { "date": "2023-06-10", "value": 0.83 },
+      { "date": "2023-06-11", "value": 0.86 },
+      { "date": "2023-06-12", "value": 0.88 },
+      { "date": "2023-06-13", "value": 0.87 },
+      { "date": "2023-06-14", "value": 0.90 },
+      { "date": "2023-06-15", "value": 0.92 }
+    ],
+    "issueCountTimeSeries": [
+      { "date": "2023-06-08", "value": 12 },
+      { "date": "2023-06-09", "value": 14 },
+      { "date": "2023-06-10", "value": 18 },
+      { "date": "2023-06-11", "value": 10 },
+      { "date": "2023-06-12", "value": 9 },
+      { "date": "2023-06-13", "value": 9 },
+      { "date": "2023-06-14", "value": 12 },
+      { "date": "2023-06-15", "value": 15 }
+    ]
+  },
+  "healingSettings": {
+    "autonomousMode": "Semi-Automatic",
+    "confidenceThreshold": 85,
+    "maxRetryAttempts": 3,
+    "approvalRequired": "High Impact Only",
+    "learningMode": "Active",
+    "notificationSettings": {
+      "teams": true,
+      "email": true,
+      "sms": false,
+      "minSeverityForNotification": "HIGH"
+    },
+    "enabledStrategies": {
+      "data_quality": {
+        "outliers": true,
+        "format_errors": true,
+        "missing_values": true,
+        "referential_integrity": true,
+        "schema_drift": true,
+        "data_corruption": true
+      },
+      "pipeline": {
+        "resource_exhaustion": true,
+        "timeout": true,
+        "dependency_failure": true,
+        "configuration_error": true,
+        "permission_error": true
+      }
+    }
+  },
+  "modelHealth": {
+    "driftStatus": "OK",
+    "featureHealth": "OK",
+    "predictions": "OK",
+    "inferenceTime": "OK",
+    "lastChecked": "2023-06-15T09:30:00Z",
+    "details": {
+      "driftMetrics": {
+        "featureDrift": 0.03,
+        "predictionDrift": 0.02,
+        "threshold": 0.1
+      },
+      "performanceMetrics": {
+        "accuracyTrend": "STABLE",
+        "latencyMs": 18,
+        "throughput": 250
+      },
+      "lastRetraining": "2023-06-12T14:30:00Z",
+      "nextScheduledCheck": "2023-06-15T21:30:00Z"
+    }
+  },
+  "activityLog": [
+    {
+      "activityId": "activity-001",
+      "timestamp": "2023-06-15T10:16:05Z",
+      "activityType": "ISSUE_DETECTED",
+      "issueId": "issue-001",
+      "actionId": null,
+      "status": "COMPLETED",
+      "details": {
+        "issueType": "outliers",
+        "dataset": "sales_data",
+        "table": "daily_sales"
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-002",
+      "timestamp": "2023-06-15T10:16:05Z",
+      "activityType": "HEALING_ACTION",
+      "issueId": "issue-001",
+      "actionId": "corr-001",
+      "status": "COMPLETED",
+      "details": {
+        "correctionStrategy": "winsorization",
+        "confidenceScore": 0.92,
+        "affectedRows": 5
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-003",
+      "timestamp": "2023-06-15T10:16:15Z",
+      "activityType": "ISSUE_DETECTED",
+      "issueId": "issue-002",
+      "actionId": null,
+      "status": "COMPLETED",
+      "details": {
+        "issueType": "format_errors",
+        "dataset": "customer_profiles",
+        "table": "customer_activity"
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-004",
+      "timestamp": "2023-06-15T10:16:15Z",
+      "activityType": "HEALING_ACTION",
+      "issueId": "issue-002",
+      "actionId": "corr-002",
+      "status": "COMPLETED",
+      "details": {
+        "correctionStrategy": "date_format_correction",
+        "confidenceScore": 0.88,
+        "affectedRows": 3
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-009",
+      "timestamp": "2023-06-15T10:16:40Z",
+      "activityType": "ACTION_APPROVAL",
+      "issueId": "issue-005",
+      "actionId": "corr-005",
+      "status": "APPROVED",
+      "details": {
+        "correctionStrategy": "deduplication",
+        "confidenceScore": 0.78
+      },
+      "user": "user123"
+    },
+    {
+      "activityId": "activity-010",
+      "timestamp": "2023-06-15T10:16:45Z",
+      "activityType": "HEALING_ACTION",
+      "issueId": "issue-005",
+      "actionId": "corr-005",
+      "status": "COMPLETED",
+      "details": {
+        "correctionStrategy": "deduplication",
+        "confidenceScore": 0.78,
+        "affectedRows": 6
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-018",
+      "timestamp": "2023-06-15T10:17:25Z",
+      "activityType": "HEALING_ACTION",
+      "issueId": "issue-009",
+      "actionId": "corr-009",
+      "status": "FAILED",
+      "details": {
+        "correctionStrategy": "reference_repair",
+        "confidenceScore": 0.65,
+        "errorMessage": "Failed to find or create reference values in categories table"
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-022",
+      "timestamp": "2023-06-15T10:17:35Z",
+      "activityType": "ACTION_APPROVAL",
+      "issueId": "issue-011",
+      "actionId": "corr-011",
+      "status": "APPROVED",
+      "details": {
+        "correctionStrategy": "resource_scaling",
+        "confidenceScore": 0.94
+      },
+      "user": "admin789"
+    },
+    {
+      "activityId": "activity-023",
+      "timestamp": "2023-06-15T10:17:45Z",
+      "activityType": "HEALING_ACTION",
+      "issueId": "issue-011",
+      "actionId": "corr-011",
+      "status": "COMPLETED",
+      "details": {
+        "correctionStrategy": "resource_scaling",
+        "confidenceScore": 0.94,
+        "resourceType": "BIGQUERY_SLOTS"
+      },
+      "user": "system"
+    },
+    {
+      "activityId": "activity-030",
+      "timestamp": "2023-06-15T10:18:25Z",
+      "activityType": "ISSUE_DETECTED",
+      "issueId": "issue-015",
+      "actionId": null,
+      "status": "PENDING_APPROVAL",
+      "details": {
+        "issueType": "permission_error",
+        "resourceType": "BIGQUERY_DATASET",
+        "resourceName": "vendor_data:vendor_metrics"
+      },
+      "user": "system"
+    }
+  ],
+  "issueTypes": [
+    {
+      "value": "outliers",
+      "label": "Outliers",
+      "category": "data_quality",
+      "description": "Values outside expected range or distribution"
+    },
+    {
+      "value": "format_errors",
+      "label": "Format Errors",
+      "category": "data_quality",
+      "description": "Data not conforming to expected format"
+    },
+    {
+      "value": "missing_values",
+      "label": "Missing Values",
+      "category": "data_quality",
+      "description": "Required values missing from dataset"
+    },
+    {
+      "value": "referential_integrity",
+      "label": "Referential Integrity",
+      "category": "data_quality",
+      "description": "Foreign key or uniqueness violations"
+    },
+    {
+      "value": "schema_drift",
+      "label": "Schema Drift",
+      "category": "data_quality",
+      "description": "Unexpected changes in data schema"
+    },
+    {
+      "value": "data_corruption",
+      "label": "Data Corruption",
+      "category": "data_quality",
+      "description": "Invalid or corrupted data values"
+    },
+    {
+      "value": "resource_exhaustion",
+      "label": "Resource Exhaustion",
+      "category": "pipeline",
+      "description": "System resources depleted during execution"
+    },
+    {
+      "value": "timeout",
+      "label": "Timeout",
+      "category": "pipeline",
+      "description": "Operation exceeded time limit"
+    },
+    {
+      "value": "dependency_failure",
+      "label": "Dependency Failure",
+      "category": "pipeline",
+      "description": "Upstream task or dependency failed"
+    },
+    {
+      "value": "configuration_error",
+      "label": "Configuration Error",
+      "category": "pipeline",
+      "description": "Invalid configuration parameters"
+    },
+    {
+      "value": "permission_error",
+      "label": "Permission Error",
+      "category": "pipeline",
+      "description": "Insufficient permissions for operation"
+    }
+  ],
+  "correctionStrategies": [
+    {
+      "value": "winsorization",
+      "label": "Winsorization",
+      "applicableIssueTypes": ["outliers"],
+      "description": "Cap values at specified percentiles"
+    },
+    {
+      "value": "date_format_correction",
+      "label": "Date Format Correction",
+      "applicableIssueTypes": ["format_errors"],
+      "description": "Standardize date formats to expected format"
+    },
+    {
+      "value": "deduplication",
+      "label": "Deduplication",
+      "applicableIssueTypes": ["referential_integrity"],
+      "description": "Remove duplicate records based on key fields"
+    },
+    {
+      "value": "reference_repair",
+      "label": "Reference Repair",
+      "applicableIssueTypes": ["referential_integrity"],
+      "description": "Fix foreign key references to match parent table"
+    },
+    {
+      "value": "resource_scaling",
+      "label": "Resource Scaling",
+      "applicableIssueTypes": ["resource_exhaustion"],
+      "description": "Increase allocated resources for operation"
+    },
+    {
+      "value": "permission_grant",
+      "label": "Permission Grant",
+      "applicableIssueTypes": ["permission_error"],
+      "description": "Grant required permissions to service account"
+    },
+    {
+      "value": "schema_evolution",
+      "label": "Schema Evolution",
+      "applicableIssueTypes": ["schema_drift"],
+      "description": "Update schema to accommodate changes"
+    },
+    {
+      "value": "type_conversion",
+      "label": "Type Conversion",
+      "applicableIssueTypes": ["format_errors"],
+      "description": "Convert data to expected type"
+    },
+    {
+      "value": "imputation",
+      "label": "Imputation",
+      "applicableIssueTypes": ["missing_values"],
+      "description": "Fill missing values using statistical methods"
+    },
+    {
+      "value": "parameter_adjustment",
+      "label": "Parameter Adjustment",
+      "applicableIssueTypes": ["timeout", "configuration_error"],
+      "description": "Adjust configuration parameters to optimal values"
+    }
+  ],
+  "severityLevels": [
+    {
+      "value": "CRITICAL",
+      "label": "Critical",
+      "color": "#d32f2f"
+    },
+    {
+      "value": "HIGH",
+      "label": "High",
+      "color": "#f57c00"
+    },
+    {
+      "value": "MEDIUM",
+      "label": "Medium",
+      "color": "#fbc02d"
+    },
+    {
+      "value": "LOW",
+      "label": "Low",
+      "color": "#388e3c"
+    }
+  ],
+  "apiResponses": {
+    "getHealingIssues": {
+      "success": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "totalCount": 0,
+          "page": 1,
+          "pageSize": 10,
+          "totalPages": 1
+        }
+      },
+      "error": {
+        "status": 500,
+        "body": {
+          "error": "Internal Server Error",
+          "message": "Failed to retrieve healing issues",
+          "code": "INTERNAL_ERROR"
+        }
+      }
+    },
+    "getHealingActions": {
+      "success": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "totalCount": 0,
+          "page": 1,
+          "pageSize": 10,
+          "totalPages": 1
+        }
+      },
+      "error": {
+        "status": 500,
+        "body": {
+          "error": "Internal Server Error",
+          "message": "Failed to retrieve healing actions",
+          "code": "INTERNAL_ERROR"
+        }
+      }
+    },
+    "getHealingModels": {
+      "success": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "totalCount": 0,
+          "page": 1,
+          "pageSize": 10,
+          "totalPages": 1
+        }
+      },
+      "error": {
+        "status": 500,
+        "body": {
+          "error": "Internal Server Error",
+          "message": "Failed to retrieve healing models",
+          "code": "INTERNAL_ERROR"
+        }
+      }
+    },
+    "getHealingStatistics": {
+      "success": {
+        "status": 200,
+        "body": {}
+      },
+      "error": {
+        "status": 500,
+        "body": {
+          "error": "Internal Server Error",
+          "message": "Failed to retrieve healing statistics",
+          "code": "INTERNAL_ERROR"
+        }
+      }
+    },
+    "getHealingSettings": {
+      "success": {
+        "status": 200,
+        "body": {}
+      },
+      "error": {
+        "status": 500,
+        "body": {
+          "error": "Internal Server Error",
+          "message": "Failed to retrieve healing settings",
+          "code": "INTERNAL_ERROR"
+        }
+      }
+    },
+    "getHealingIssueDetails": {
+      "success": {
+        "status": 200,
+        "body": {}
+      },
+      "error": {
+        "status": 404,
+        "body": {
+          "error": "Not Found",
+          "message": "Issue not found",
+          "code": "RESOURCE_NOT_FOUND"
+        }
+      }
+    },
+    "getHealingActionDetails": {
+      "success": {
+        "status": 200,
+        "body": {}
+      },
+      "error": {
+        "status": 404,
+        "body": {
+          "error": "Not Found",
+          "message": "Action not found",
+          "code": "RESOURCE_NOT_FOUND"
+        }
+      }
+    },
+    "approveHealingAction": {
+      "success": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Action approved successfully",
+          "actionId": "corr-015"
+        }
+      },
+      "error": {
+        "status": 400,
+        "body": {
+          "error": "Bad Request",
+          "message": "Action is not in a state that can be approved",
+          "code": "INVALID_STATE"
+        }
+      }
+    },
+    "rejectHealingAction": {
+      "success": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Action rejected successfully",
+          "actionId": "corr-015"
+        }
+      },
+      "error": {
+        "status": 400,
+        "body": {
+          "error": "Bad Request",
+          "message": "Action is not in a state that can be rejected",
+          "code": "INVALID_STATE"
+        }
+      }
+    },
+    "updateHealingSettings": {
+      "success": {
+        "status": 200,
+        "body": {
+          "success": true,
+          "message": "Settings updated successfully"
+        }
+      },
+      "error": {
+        "status": 400,
+        "body": {
+          "error": "Bad Request",
+          "message": "Invalid settings provided",
+          "code": "VALIDATION_ERROR",
+          "details": {
+            "confidenceThreshold": "Must be between 0 and 100"
+          }
+        }
+      }
+    }
+  }
+}
