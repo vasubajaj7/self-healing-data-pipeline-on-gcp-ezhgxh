@@ -1,0 +1,70 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference base resources that will be customized for production
+bases:
+  - ../../base
+
+# Include production-specific resources
+resources:
+  - ./configs.yaml
+  - ./ingress.yaml
+
+# Apply production-specific patches
+patches:
+  - ./deployment-patches.yaml
+
+# Set production namespace for all resources
+namespace: self-healing-pipeline-prod
+
+# Add production labels to all resources
+commonLabels:
+  environment: production
+  tier: production
+
+# Generate production-specific ConfigMaps
+configMapGenerator:
+  - name: pipeline-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - GCP_PROJECT_ID=self-healing-pipeline-prod
+      - GCP_REGION=us-central1
+      - BIGQUERY_DATASET=self_healing_pipeline_prod
+      - GCS_BUCKET=self-healing-pipeline-prod-data
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+      - ENABLE_PROFILING=false
+  - name: feature-flags
+    behavior: create
+    literals:
+      - ENABLE_EXPERIMENTAL_FEATURES=false
+      - ENABLE_DEBUG_TOOLS=false
+      - ENABLE_MOCK_DATA=false
+      - ENABLE_AI_PREDICTIONS=true
+      - ENABLE_ADVANCED_MONITORING=true
+      - ENABLE_SELF_HEALING=true
+
+# Generate production-specific Secrets
+secretGenerator:
+  - name: prod-credentials
+    files:
+      - key.json=secrets/prod-service-account-key.json
+  - name: database-credentials
+    behavior: merge
+    literals:
+      - CLOUDSQL_USER=pipeline_prod_user
+      - CLOUDSQL_CONNECTION_NAME=self-healing-pipeline-prod:us-central1:pipeline-db-prod
+    type: Opaque
+
+# Configure high availability for production workloads
+replicas:
+  - name: web-deployment
+    count: 3
+
+# Use production-specific container images
+images:
+  - name: gcr.io/${PROJECT_ID}/self-healing-pipeline/web
+    newName: gcr.io/self-healing-pipeline-prod/self-healing-pipeline/web
+    newTag: stable
