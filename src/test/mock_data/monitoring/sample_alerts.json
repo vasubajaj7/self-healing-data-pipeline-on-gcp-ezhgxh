@@ -1,0 +1,376 @@
+[
+  {
+    "alert_id": "alert-001",
+    "alert_type": "ANOMALY",
+    "description": "BigQuery load failed due to quota exceeded",
+    "severity": "CRITICAL",
+    "context": {
+      "job_id": "bq_load_customer_20230615_0945",
+      "error_message": "Quota exceeded: Your project exceeded quota for concurrent queries.",
+      "affected_table": "customer_data",
+      "affected_dataset": "analytics"
+    },
+    "component": "BigQuery",
+    "execution_id": "pipeline-exec-20230615-001",
+    "status": "NEW",
+    "created_at": "2023-06-15T09:45:00Z",
+    "updated_at": "2023-06-15T09:45:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": ["alert-005"],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-pipeline-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T09:45:30Z"
+      },
+      {
+        "channel": "EMAIL",
+        "recipient": "data-team@example.com",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T09:45:35Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-002",
+    "alert_type": "QUALITY",
+    "description": "Schema drift detected in sales_metrics table",
+    "severity": "MEDIUM",
+    "context": {
+      "expected_schema": "sales_metrics_v1",
+      "actual_schema": "sales_metrics_v2",
+      "missing_columns": ["discount_percent"],
+      "new_columns": ["promotion_id"],
+      "affected_table": "sales_metrics",
+      "affected_dataset": "analytics"
+    },
+    "component": "Data Quality",
+    "execution_id": "pipeline-exec-20230615-002",
+    "status": "ACKNOWLEDGED",
+    "created_at": "2023-06-15T09:20:00Z",
+    "updated_at": "2023-06-15T09:35:00Z",
+    "acknowledged_at": "2023-06-15T09:35:00Z",
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-quality-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T09:20:30Z"
+      }
+    ],
+    "acknowledgment_details": {
+      "acknowledged_by": "data.engineer@example.com",
+      "notes": "Investigating schema changes"
+    },
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-003",
+    "alert_type": "PERFORMANCE",
+    "description": "API response slowdown detected",
+    "severity": "MEDIUM",
+    "context": {
+      "api_endpoint": "https://api.example.com/v2/products",
+      "average_response_time": "1.2s",
+      "baseline_response_time": "0.8s",
+      "increase_percentage": "50%",
+      "affected_component": "product_api"
+    },
+    "component": "External API",
+    "execution_id": "pipeline-exec-20230615-003",
+    "status": "NEW",
+    "created_at": "2023-06-15T09:03:00Z",
+    "updated_at": "2023-06-15T09:03:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-pipeline-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T09:03:30Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-004",
+    "alert_type": "RESOURCE",
+    "description": "Storage utilization high",
+    "severity": "LOW",
+    "context": {
+      "bucket_name": "data-pipeline-staging",
+      "current_usage": "85%",
+      "threshold": "80%",
+      "total_size": "500GB",
+      "used_size": "425GB"
+    },
+    "component": "Cloud Storage",
+    "execution_id": null,
+    "status": "NEW",
+    "created_at": "2023-06-15T08:45:00Z",
+    "updated_at": "2023-06-15T08:45:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "EMAIL",
+        "recipient": "storage-admin@example.com",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T08:45:30Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-005",
+    "alert_type": "PERFORMANCE",
+    "description": "Query performance degrading",
+    "severity": "LOW",
+    "context": {
+      "query_id": "bq_query_20230615_0930",
+      "execution_time": "45s",
+      "baseline_time": "30s",
+      "increase_percentage": "50%",
+      "affected_table": "sales_metrics",
+      "affected_dataset": "analytics"
+    },
+    "component": "BigQuery",
+    "execution_id": "pipeline-exec-20230615-001",
+    "status": "RESOLVED",
+    "created_at": "2023-06-15T07:30:00Z",
+    "updated_at": "2023-06-15T08:15:00Z",
+    "acknowledged_at": "2023-06-15T07:45:00Z",
+    "resolved_at": "2023-06-15T08:15:00Z",
+    "related_alerts": ["alert-001"],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-pipeline-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T07:30:30Z"
+      }
+    ],
+    "acknowledgment_details": {
+      "acknowledged_by": "data.engineer@example.com",
+      "notes": "Looking into query optimization"
+    },
+    "resolution_details": {
+      "resolved_by": "data.engineer@example.com",
+      "resolution": "Added table partitioning to improve query performance",
+      "resolution_time": "30 minutes"
+    }
+  },
+  {
+    "alert_id": "alert-006",
+    "alert_type": "ANOMALY",
+    "description": "Unusual number of null values in customer_address field",
+    "severity": "HIGH",
+    "context": {
+      "table": "customer_data",
+      "column": "customer_address",
+      "null_percentage": "15%",
+      "expected_percentage": "<5%",
+      "record_count": 1250,
+      "null_count": 187
+    },
+    "component": "Data Quality",
+    "execution_id": "pipeline-exec-20230614-005",
+    "status": "RESOLVED",
+    "created_at": "2023-06-14T14:20:00Z",
+    "updated_at": "2023-06-14T16:45:00Z",
+    "acknowledged_at": "2023-06-14T14:35:00Z",
+    "resolved_at": "2023-06-14T16:45:00Z",
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-quality-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-14T14:20:30Z"
+      },
+      {
+        "channel": "EMAIL",
+        "recipient": "data-quality@example.com",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-14T14:20:35Z"
+      }
+    ],
+    "acknowledgment_details": {
+      "acknowledged_by": "quality.engineer@example.com",
+      "notes": "Investigating data source for address field issues"
+    },
+    "resolution_details": {
+      "resolved_by": "quality.engineer@example.com",
+      "resolution": "Fixed data extraction logic to properly handle address field",
+      "resolution_time": "2 hours 25 minutes",
+      "fix_commit_id": "abc123def456"
+    }
+  },
+  {
+    "alert_id": "alert-007",
+    "alert_type": "SYSTEM",
+    "description": "Cloud Composer environment unhealthy",
+    "severity": "CRITICAL",
+    "context": {
+      "environment_name": "data-pipeline-composer",
+      "region": "us-central1",
+      "error_message": "Airflow scheduler is not heartbeating",
+      "affected_services": ["scheduler", "webserver"],
+      "health_status": "RED"
+    },
+    "component": "Cloud Composer",
+    "execution_id": null,
+    "status": "SUPPRESSED",
+    "created_at": "2023-06-14T10:15:00Z",
+    "updated_at": "2023-06-14T10:30:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "platform-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-14T10:15:30Z"
+      },
+      {
+        "channel": "EMAIL",
+        "recipient": "platform-team@example.com",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-14T10:15:35Z"
+      },
+      {
+        "channel": "SMS",
+        "recipient": "+1234567890",
+        "success": false,
+        "details": "SMS delivery failed: Invalid phone number format",
+        "timestamp": "2023-06-14T10:15:40Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {},
+    "suppression_reason": "Maintenance window in progress until 2023-06-14T12:00:00Z"
+  },
+  {
+    "alert_id": "alert-008",
+    "alert_type": "PREDICTION",
+    "description": "Predicted slowdown in sales_metrics pipeline",
+    "severity": "INFO",
+    "context": {
+      "pipeline_id": "sales_metrics_daily",
+      "predicted_execution_time": "45 minutes",
+      "normal_execution_time": "30 minutes",
+      "confidence": "85%",
+      "factors": ["increasing data volume", "complex joins", "unoptimized queries"]
+    },
+    "component": "AI Prediction",
+    "execution_id": null,
+    "status": "NEW",
+    "created_at": "2023-06-15T06:00:00Z",
+    "updated_at": "2023-06-15T06:00:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-pipeline-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T06:00:30Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-009",
+    "alert_type": "QUALITY",
+    "description": "Outliers detected in order_amount column",
+    "severity": "MEDIUM",
+    "context": {
+      "table": "orders",
+      "column": "order_amount",
+      "outlier_count": 15,
+      "total_records": 5000,
+      "outlier_percentage": "0.3%",
+      "threshold": "0.1%",
+      "min_outlier_value": 15000,
+      "max_outlier_value": 25000,
+      "normal_range": [10, 5000]
+    },
+    "component": "Data Quality",
+    "execution_id": "pipeline-exec-20230615-004",
+    "status": "NEW",
+    "created_at": "2023-06-15T10:30:00Z",
+    "updated_at": "2023-06-15T10:30:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": [],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-quality-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T10:30:30Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  },
+  {
+    "alert_id": "alert-010",
+    "alert_type": "HEALING",
+    "description": "Self-healing action applied: Schema evolution",
+    "severity": "INFO",
+    "context": {
+      "action_type": "SCHEMA_EVOLUTION",
+      "target_table": "sales_metrics",
+      "target_dataset": "analytics",
+      "changes_applied": ["Added column promotion_id STRING"],
+      "confidence_score": "92%",
+      "execution_time": "45 seconds"
+    },
+    "component": "Self-Healing",
+    "execution_id": "healing-exec-20230615-001",
+    "status": "NEW",
+    "created_at": "2023-06-15T09:40:00Z",
+    "updated_at": "2023-06-15T09:40:00Z",
+    "acknowledged_at": null,
+    "resolved_at": null,
+    "related_alerts": ["alert-002"],
+    "notifications": [
+      {
+        "channel": "TEAMS",
+        "recipient": "data-pipeline-alerts",
+        "success": true,
+        "details": "Notification delivered successfully",
+        "timestamp": "2023-06-15T09:40:30Z"
+      }
+    ],
+    "acknowledgment_details": {},
+    "resolution_details": {}
+  }
+]
