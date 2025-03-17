@@ -1,0 +1,730 @@
+import great_expectations as ge
+from great_expectations.core.expectation_suite import ExpectationSuite
+from great_expectations.core.expectation_configuration import ExpectationConfiguration
+from great_expectations.core.batch import BatchRequest
+from great_expectations.exceptions import DataContextError, ExpectationSuiteError
+import logging
+import json
+import datetime
+import os
+import sys
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Package version
+__version__ = "0.1.0"  # Great Expectations v0.15.50 compatibility
+
+def create_test_suite():
+    """
+    Creates a test expectation suite for validating data quality.
+    
+    This function programmatically builds a Great Expectations suite with
+    all the validation rules defined in the specification.
+    
+    Returns:
+        ExpectationSuite: A Great Expectations suite with validation rules
+    """
+    logger.info("Creating test expectation suite")
+    
+    # Create a new expectation suite
+    suite = ExpectationSuite(
+        expectation_suite_name="test_suite",
+        expectations=[],
+        meta={
+            "great_expectations_version": "0.15.50",
+            "expectation_suite_name": "test_suite",
+            "created_at": "2023-06-15T10:00:00Z",
+            "updated_at": "2023-06-15T10:00:00Z",
+            "data_asset_type": "Dataset",
+            "description": "Sample expectation suite for testing the data quality validation framework"
+        },
+        evaluation_parameters={
+            "date_range_start": "2023-01-01",
+            "date_range_end": "2023-12-31",
+            "min_row_count": 10,
+            "max_row_count": 1000,
+            "value_threshold": 100
+        },
+        data_asset_name="sample_data.csv",
+        expectation_suite_id="test_suite_001"
+    )
+    
+    # Add row count expectation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_table_row_count_to_be_between",
+            kwargs={
+                "min_value": 10,
+                "max_value": 1000
+            },
+            meta={
+                "rule_id": "rule_001",
+                "rule_name": "Row Count Validation",
+                "rule_type": "TABLE_STRUCTURE",
+                "dimension": "COMPLETENESS",
+                "description": "Validates that the table has an appropriate number of rows"
+            }
+        )
+    )
+    
+    # Add column structure expectation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_table_columns_to_match_ordered_list",
+            kwargs={
+                "column_list": ["id", "name", "value", "timestamp", "category"]
+            },
+            meta={
+                "rule_id": "rule_002",
+                "rule_name": "Column Structure Validation",
+                "rule_type": "SCHEMA",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that the table has the expected columns in the correct order"
+            }
+        )
+    )
+    
+    # Add ID not null validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_not_be_null",
+            kwargs={
+                "column": "id",
+                "mostly": 1.0
+            },
+            meta={
+                "rule_id": "rule_003",
+                "rule_name": "ID Not Null Validation",
+                "rule_type": "COLUMN_NULL",
+                "dimension": "COMPLETENESS",
+                "description": "Validates that the ID column does not contain null values"
+            }
+        )
+    )
+    
+    # Add ID uniqueness validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_be_unique",
+            kwargs={
+                "column": "id"
+            },
+            meta={
+                "rule_id": "rule_004",
+                "rule_name": "ID Uniqueness Validation",
+                "rule_type": "COLUMN_UNIQUE",
+                "dimension": "UNIQUENESS",
+                "description": "Validates that the ID column contains unique values"
+            }
+        )
+    )
+    
+    # Add value type validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_be_of_type",
+            kwargs={
+                "column": "value",
+                "type_": "FLOAT"
+            },
+            meta={
+                "rule_id": "rule_005",
+                "rule_name": "Value Type Validation",
+                "rule_type": "COLUMN_TYPE",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that the value column contains float values"
+            }
+        )
+    )
+    
+    # Add value range validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_be_between",
+            kwargs={
+                "column": "value",
+                "min_value": 0,
+                "max_value": 100,
+                "mostly": 0.95
+            },
+            meta={
+                "rule_id": "rule_006",
+                "rule_name": "Value Range Validation",
+                "rule_type": "COLUMN_RANGE",
+                "dimension": "ACCURACY",
+                "description": "Validates that the value column contains values within the expected range"
+            }
+        )
+    )
+    
+    # Add category format validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_match_regex",
+            kwargs={
+                "column": "category",
+                "regex": "^(A|B|C|D)$"
+            },
+            meta={
+                "rule_id": "rule_007",
+                "rule_name": "Category Format Validation",
+                "rule_type": "COLUMN_FORMAT",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that the category column contains only valid category codes"
+            }
+        )
+    )
+    
+    # Add timestamp format validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_be_dateutil_parseable",
+            kwargs={
+                "column": "timestamp",
+                "mostly": 0.98
+            },
+            meta={
+                "rule_id": "rule_008",
+                "rule_name": "Timestamp Format Validation",
+                "rule_type": "COLUMN_FORMAT",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that the timestamp column contains valid date/time values"
+            }
+        )
+    )
+    
+    # Add category-value relationship validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_pair_values_to_be_in_set",
+            kwargs={
+                "column_A": "category",
+                "column_B": "value",
+                "value_pairs_set": [
+                    ["A", 10], ["A", 20], ["B", 30], ["B", 40],
+                    ["C", 50], ["C", 60], ["D", 70], ["D", 80]
+                ],
+                "mostly": 0.9
+            },
+            meta={
+                "rule_id": "rule_009",
+                "rule_name": "Category-Value Relationship Validation",
+                "rule_type": "RELATIONSHIP",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that category and value columns have expected relationships"
+            }
+        )
+    )
+    
+    # Add category value set validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_to_be_in_set",
+            kwargs={
+                "column": "category",
+                "value_set": ["A", "B", "C", "D"]
+            },
+            meta={
+                "rule_id": "rule_010",
+                "rule_name": "Category Value Set Validation",
+                "rule_type": "COLUMN_VALUES",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that the category column contains only values from the allowed set"
+            }
+        )
+    )
+    
+    # Add category-specific value range validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_in_range_by_group",
+            kwargs={
+                "column": "value",
+                "group_column": "category",
+                "group_ranges": {
+                    "A": [0, 25],
+                    "B": [25, 50],
+                    "C": [50, 75],
+                    "D": [75, 100]
+                },
+                "mostly": 0.9
+            },
+            meta={
+                "rule_id": "rule_011",
+                "rule_name": "Category-Specific Value Range Validation",
+                "rule_type": "CUSTOM",
+                "dimension": "ACCURACY",
+                "description": "Validates that values are within expected ranges for each category"
+            }
+        )
+    )
+    
+    # Add value outlier validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_value_outliers_to_be_within_range",
+            kwargs={
+                "column": "value",
+                "method": "iqr",
+                "outlier_min": -10,
+                "outlier_max": 110,
+                "mostly": 0.99
+            },
+            meta={
+                "rule_id": "rule_012",
+                "rule_name": "Value Outlier Validation",
+                "rule_type": "CUSTOM",
+                "dimension": "ACCURACY",
+                "description": "Validates that the value column does not contain significant outliers"
+            }
+        )
+    )
+    
+    # Add category reference validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_in_reference_table",
+            kwargs={
+                "column": "category",
+                "reference_table": "reference_data.category_codes",
+                "reference_column": "code"
+            },
+            meta={
+                "rule_id": "rule_013",
+                "rule_name": "Category Reference Validation",
+                "rule_type": "RELATIONSHIP",
+                "dimension": "CONSISTENCY",
+                "description": "Validates that category values exist in the reference table"
+            }
+        )
+    )
+    
+    # Add cumulative value trend validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_column_values_trend_increasing",
+            kwargs={
+                "column": "cumulative_value",
+                "tolerance": 0.05
+            },
+            meta={
+                "rule_id": "rule_014",
+                "rule_name": "Cumulative Value Trend Validation",
+                "rule_type": "CUSTOM",
+                "dimension": "ACCURACY",
+                "description": "Validates that cumulative values follow an increasing trend"
+            }
+        )
+    )
+    
+    # Add date range row count validation
+    suite.add_expectation(
+        ExpectationConfiguration(
+            expectation_type="expect_table_row_count_to_be_between_dates",
+            kwargs={
+                "date_column": "timestamp",
+                "start_date": "2023-01-01",
+                "end_date": "2023-01-31",
+                "min_count": 100,
+                "max_count": 500
+            },
+            meta={
+                "rule_id": "rule_015",
+                "rule_name": "Date Range Row Count Validation",
+                "rule_type": "TABLE_STRUCTURE",
+                "dimension": "COMPLETENESS",
+                "description": "Validates that the table has an appropriate number of rows for the date range"
+            }
+        )
+    )
+    
+    logger.info(f"Created expectation suite with {len(suite.expectations)} expectations")
+    return suite
+
+def save_expectation_suite(suite, context):
+    """
+    Saves the expectation suite to the Great Expectations store.
+    
+    Args:
+        suite (ExpectationSuite): The expectation suite to save
+        context (DataContext): Great Expectations data context
+        
+    Returns:
+        str: Path to the saved expectation suite
+    """
+    try:
+        logger.info(f"Saving expectation suite '{suite.expectation_suite_name}'")
+        context.save_expectation_suite(suite)
+        return f"Expectation suite '{suite.expectation_suite_name}' saved successfully"
+    except DataContextError as e:
+        logger.error(f"DataContext error: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save expectation suite: {str(e)}")
+        raise Exception(f"Failed to save expectation suite: {str(e)}")
+
+def load_expectation_suite(context, suite_name="test_suite"):
+    """
+    Loads an expectation suite from the Great Expectations store.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        suite_name (str): Name of the suite to load
+        
+    Returns:
+        ExpectationSuite: The loaded expectation suite
+    """
+    try:
+        logger.info(f"Loading expectation suite '{suite_name}'")
+        return context.get_expectation_suite(suite_name)
+    except DataContextError as e:
+        logger.error(f"DataContext error when loading suite '{suite_name}': {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to load expectation suite '{suite_name}': {str(e)}")
+        raise Exception(f"Failed to load expectation suite '{suite_name}': {str(e)}")
+
+def update_expectation_suite(context, suite_name, expectations_to_add=None, expectations_to_remove=None):
+    """
+    Updates an existing expectation suite by adding and/or removing expectations.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        suite_name (str): Name of the suite to update
+        expectations_to_add (list): List of ExpectationConfiguration objects to add
+        expectations_to_remove (list): List of expectation_type strings to remove
+        
+    Returns:
+        ExpectationSuite: The updated expectation suite
+    """
+    try:
+        logger.info(f"Updating expectation suite '{suite_name}'")
+        
+        # Load the existing suite
+        suite = context.get_expectation_suite(suite_name)
+        
+        # Remove expectations if specified
+        if expectations_to_remove:
+            for exp_type in expectations_to_remove:
+                logger.info(f"Removing expectations of type '{exp_type}'")
+                suite.remove_expectation(
+                    expectation_type=exp_type,
+                    remove_multiple=True
+                )
+        
+        # Add expectations if specified
+        if expectations_to_add:
+            for expectation in expectations_to_add:
+                logger.info(f"Adding expectation of type '{expectation.expectation_type}'")
+                suite.add_expectation(expectation)
+        
+        # Update metadata
+        suite.meta["updated_at"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        # Save the updated suite
+        context.save_expectation_suite(suite)
+        logger.info(f"Updated expectation suite '{suite_name}' successfully")
+        
+        return suite
+    except DataContextError as e:
+        logger.error(f"DataContext error when updating suite '{suite_name}': {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update expectation suite '{suite_name}': {str(e)}")
+        raise Exception(f"Failed to update expectation suite '{suite_name}': {str(e)}")
+
+def export_suite_to_json(suite, filepath=None):
+    """
+    Exports an expectation suite to a JSON file.
+    
+    Args:
+        suite (ExpectationSuite): The expectation suite to export
+        filepath (str, optional): Path to save the JSON file. If None, returns the JSON string.
+        
+    Returns:
+        str: JSON string or file path where JSON was saved
+    """
+    try:
+        logger.info(f"Exporting expectation suite '{suite.expectation_suite_name}' to JSON")
+        suite_dict = suite.to_json_dict()
+        json_str = json.dumps(suite_dict, indent=2)
+        
+        if filepath:
+            with open(filepath, 'w') as f:
+                f.write(json_str)
+            logger.info(f"Expectation suite exported to {filepath}")
+            return filepath
+        else:
+            return json_str
+    except Exception as e:
+        logger.error(f"Failed to export expectation suite to JSON: {str(e)}")
+        raise Exception(f"Failed to export expectation suite to JSON: {str(e)}")
+
+def import_suite_from_json(context, json_str=None, filepath=None):
+    """
+    Imports an expectation suite from a JSON string or file.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        json_str (str, optional): JSON string representation of the suite
+        filepath (str, optional): Path to the JSON file
+        
+    Returns:
+        ExpectationSuite: The imported expectation suite
+    """
+    try:
+        if filepath and os.path.exists(filepath):
+            logger.info(f"Importing expectation suite from file {filepath}")
+            with open(filepath, 'r') as f:
+                json_data = json.load(f)
+        elif json_str:
+            logger.info("Importing expectation suite from JSON string")
+            json_data = json.loads(json_str)
+        else:
+            raise ValueError("Either json_str or filepath must be provided")
+        
+        suite = ExpectationSuite(**json_data)
+        context.save_expectation_suite(suite)
+        logger.info(f"Imported expectation suite '{suite.expectation_suite_name}' successfully")
+        return suite
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"JSON parsing error: {str(e)}")
+        raise
+    except DataContextError as e:
+        logger.error(f"DataContext error when importing suite: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to import expectation suite from JSON: {str(e)}")
+        raise Exception(f"Failed to import expectation suite from JSON: {str(e)}")
+
+def validate_suite_structure(suite):
+    """
+    Validates that an expectation suite has the expected structure and all required expectations.
+    
+    Args:
+        suite (ExpectationSuite): The expectation suite to validate
+        
+    Returns:
+        bool: True if validation passes, raises exception otherwise
+    """
+    try:
+        logger.info(f"Validating structure of expectation suite '{suite.expectation_suite_name}'")
+        
+        # Check for required metadata
+        required_meta_fields = ["expectation_suite_name", "great_expectations_version"]
+        for field in required_meta_fields:
+            if field not in suite.meta:
+                raise ValueError(f"Missing required metadata field: {field}")
+        
+        # Check for minimum number of expectations
+        if len(suite.expectations) < 1:
+            raise ValueError("Expectation suite must contain at least one expectation")
+        
+        # Check that each expectation has required fields
+        for idx, expectation in enumerate(suite.expectations):
+            if not expectation.expectation_type:
+                raise ValueError(f"Expectation at index {idx} is missing expectation_type")
+            
+            if not hasattr(expectation, "kwargs") or not expectation.kwargs:
+                raise ValueError(f"Expectation '{expectation.expectation_type}' is missing kwargs")
+        
+        logger.info("Expectation suite structure validation passed")
+        return True
+    except ExpectationSuiteError as e:
+        logger.error(f"ExpectationSuite error during validation: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Expectation suite validation failed: {str(e)}")
+        raise Exception(f"Expectation suite validation failed: {str(e)}")
+
+def create_batch_request(context, datasource_name, dataset_name, data_asset_name=None, 
+                         batch_identifiers=None, runtime_parameters=None):
+    """
+    Creates a batch request for data validation.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        datasource_name (str): Name of the datasource
+        dataset_name (str): Name of the dataset
+        data_asset_name (str, optional): Name of the data asset
+        batch_identifiers (dict, optional): Identifiers for a specific batch
+        runtime_parameters (dict, optional): Parameters for runtime configuration
+        
+    Returns:
+        BatchRequest: A batch request for data validation
+    """
+    try:
+        logger.info(f"Creating batch request for datasource '{datasource_name}', dataset '{dataset_name}'")
+        
+        # Use data_asset_name if provided, otherwise use dataset_name
+        asset_name = data_asset_name if data_asset_name else dataset_name
+        
+        # Create default batch identifiers if not provided
+        if not batch_identifiers:
+            batch_identifiers = {
+                "default_identifier": datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            }
+        
+        # Create batch request
+        batch_request = BatchRequest(
+            datasource_name=datasource_name,
+            data_connector_name="default_inferred_data_connector_name",
+            data_asset_name=asset_name,
+            batch_identifiers=batch_identifiers,
+            runtime_parameters=runtime_parameters
+        )
+        
+        logger.info(f"Batch request created successfully for {asset_name}")
+        return batch_request
+    except Exception as e:
+        logger.error(f"Failed to create batch request: {str(e)}")
+        raise Exception(f"Failed to create batch request: {str(e)}")
+
+def run_suite_validation(context, suite_name, batch_request):
+    """
+    Runs validation using the specified expectation suite against a data batch.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        suite_name (str): Name of the expectation suite to use
+        batch_request (BatchRequest): Batch of data to validate
+        
+    Returns:
+        ValidationResult: The result of the validation
+    """
+    try:
+        logger.info(f"Running validation with suite '{suite_name}'")
+        validator = context.get_validator(
+            batch_request=batch_request,
+            expectation_suite_name=suite_name
+        )
+        result = validator.validate()
+        
+        success_percent = result.success * 100
+        logger.info(f"Validation completed with success rate: {success_percent:.2f}%")
+        
+        # Log details about expectations that failed
+        if not result.success:
+            failed_expectations = [res for res in result.results if not res.success]
+            logger.warning(f"{len(failed_expectations)} expectations failed:")
+            for i, failure in enumerate(failed_expectations, 1):
+                logger.warning(f"  {i}. {failure.expectation_config.expectation_type}: {failure.exception_info.get('exception_message', 'No details')}")
+        
+        return result
+    except DataContextError as e:
+        logger.error(f"DataContext error during validation: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to run validation: {str(e)}")
+        raise Exception(f"Failed to run validation: {str(e)}")
+
+def get_or_create_context(ge_dir=None):
+    """
+    Gets an existing Great Expectations context or creates a new one.
+    
+    Args:
+        ge_dir (str, optional): Path to Great Expectations directory
+        
+    Returns:
+        DataContext: Great Expectations data context
+    """
+    try:
+        if ge_dir:
+            logger.info(f"Using Great Expectations directory at {ge_dir}")
+            context = ge.data_context.DataContext(context_root_dir=ge_dir)
+        else:
+            try:
+                logger.info("Attempting to get existing Great Expectations context")
+                context = ge.get_context()
+            except (DataContextError, ValueError):
+                logger.info("No context found, creating new context")
+                context = ge.data_context.DataContext()
+        
+        logger.info(f"Great Expectations context initialized with version {context.get_config()['config_version']}")
+        return context
+    except Exception as e:
+        logger.error(f"Failed to initialize Great Expectations context: {str(e)}")
+        raise Exception(f"Failed to initialize Great Expectations context: {str(e)}")
+
+def get_available_expectation_suites(context):
+    """
+    Returns a list of available expectation suites in the context.
+    
+    Args:
+        context (DataContext): Great Expectations data context
+        
+    Returns:
+        list: Names of available expectation suites
+    """
+    try:
+        suite_names = context.list_expectation_suite_names()
+        logger.info(f"Found {len(suite_names)} expectation suites")
+        return suite_names
+    except Exception as e:
+        logger.error(f"Failed to list expectation suites: {str(e)}")
+        raise Exception(f"Failed to list expectation suites: {str(e)}")
+
+if __name__ == "__main__":
+    try:
+        # Configure environment with default values that can be overridden
+        ge_dir = os.environ.get("GE_HOME")
+        
+        # Get or create context
+        context = get_or_create_context(ge_dir)
+        
+        # Create the test suite
+        test_suite = create_test_suite()
+        
+        # Validate the suite structure
+        validate_suite_structure(test_suite)
+        
+        # Save the suite
+        result = save_expectation_suite(test_suite, context)
+        print(result)
+        
+        # List available suites
+        suites = get_available_expectation_suites(context)
+        print(f"Available suites: {suites}")
+        
+        # Export to JSON (optional)
+        json_path = export_suite_to_json(test_suite, "test_suite.json")
+        print(f"Suite exported to: {json_path}")
+        
+        # Demonstrate how to load the suite
+        loaded_suite = load_expectation_suite(context)
+        print(f"Loaded suite: {loaded_suite.expectation_suite_name}")
+        print(f"Number of expectations: {len(loaded_suite.expectations)}")
+        
+        # Example of how batch validation would be run (commented for reference)
+        """
+        # Create a batch request for a pandas DataFrame (example)
+        import pandas as pd
+        data = pd.read_csv("sample_data.csv")
+        
+        # Configure your datasource in Great Expectations first
+        # Then create a batch request for validation
+        batch_request = create_batch_request(
+            context, 
+            datasource_name="my_pandas_datasource",
+            dataset_name="sample_data"
+        )
+        
+        # Run validation
+        validation_result = run_suite_validation(context, "test_suite", batch_request)
+        
+        # Check result
+        if validation_result.success:
+            print("Validation succeeded!")
+        else:
+            print(f"Validation failed with {len([r for r in validation_result.results if not r.success])} failures")
+        """
+        
+    except Exception as e:
+        logger.error(f"Error in main execution: {str(e)}")
+        print(f"Error: {str(e)}")
+        sys.exit(1)
