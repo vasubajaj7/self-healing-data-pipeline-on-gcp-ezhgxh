@@ -1,0 +1,129 @@
+version: 2
+updates:
+  # Python dependencies for backend
+  - package-ecosystem: "pip"
+    directory: "/src/backend/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    allow:
+      - dependency-type: "direct"
+    assignees:
+      - "data-engineering-team"
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: "tensorflow"
+        versions: [">=3.0.0"]
+
+  # Python dependencies for tests
+  - package-ecosystem: "pip"
+    directory: "/src/test/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "data-engineering-team"
+    labels:
+      - "dependencies"
+      - "testing"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+    open-pull-requests-limit: 5
+
+  # JavaScript dependencies for web frontend
+  - package-ecosystem: "npm"
+    directory: "/src/web/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    assignees:
+      - "frontend-team"
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "npm"
+      include: "scope"
+    open-pull-requests-limit: 10
+
+  # Terraform dependencies in backend terraform
+  - package-ecosystem: "terraform"
+    directory: "/src/backend/terraform/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "infrastructure-team"
+    labels:
+      - "dependencies"
+      - "infrastructure"
+    commit-message:
+      prefix: "terraform"
+      include: "scope"
+    open-pull-requests-limit: 5
+
+  # Terraform dependencies in infrastructure terraform
+  - package-ecosystem: "terraform"
+    directory: "/infrastructure/terraform/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "infrastructure-team"
+    labels:
+      - "dependencies"
+      - "infrastructure"
+    commit-message:
+      prefix: "terraform"
+      include: "scope"
+    open-pull-requests-limit: 5
+
+  # Docker dependencies for backend
+  - package-ecosystem: "docker"
+    directory: "/src/backend/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "infrastructure-team"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    open-pull-requests-limit: 3
+
+  # Docker dependencies for web frontend
+  - package-ecosystem: "docker"
+    directory: "/src/web/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "infrastructure-team"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    open-pull-requests-limit: 3
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    assignees:
+      - "devops-team"
+    labels:
+      - "dependencies"
+      - "ci-cd"
+    commit-message:
+      prefix: "github-actions"
+      include: "scope"
+    open-pull-requests-limit: 5
