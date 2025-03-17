@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  api:
+    image: self-healing-pipeline-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/app
+    environment:
+      - ENV=development
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - FIRESTORE_EMULATOR_HOST=firestore:8200
+      - GCP_PROJECT_ID=local-development
+      - GCP_LOCATION=us-central1
+    depends_on:
+      - db
+      - redis
+      - firestore
+    command: uvicorn src.backend.api.app:app --host 0.0.0.0 --port 8080 --reload
+    restart: unless-stopped
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=pipeline
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    ports:
+      - "8200:8200"
+    environment:
+      - FIRESTORE_PROJECT_ID=local-development
+    command: gcloud beta emulators firestore start --host-port=0.0.0.0:8200
+    restart: unless-stopped
+
+  worker:
+    image: self-healing-pipeline-backend
+    volumes:
+      - ./:/app
+    environment:
+      - ENV=development
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - FIRESTORE_EMULATOR_HOST=firestore:8200
+      - GCP_PROJECT_ID=local-development
+      - GCP_LOCATION=us-central1
+    depends_on:
+      - api
+      - db
+      - redis
+      - firestore
+    command: python -m src.backend.worker.main
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  pipeline-network:
+    driver: bridge
