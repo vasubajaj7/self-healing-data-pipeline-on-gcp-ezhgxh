@@ -1,0 +1,98 @@
+.env
+.env.test
+.env.local
+.env.*.local
+
+# Test reports and artifacts
+reports/
+test-results/
+coverage/
+htmlcov/
+.coverage
+coverage.xml
+junit-*.xml
+test-report.html
+test-report.xml
+test-report.json
+
+# Pytest artifacts
+.pytest_cache/
+pytest-logs/
+logs/
+pytest.log
+
+# Test credentials and secrets
+credentials/
+service-account-*.json
+test-key.json
+test-credentials.json
+
+# Temporary test data
+tmp/
+temp/
+temp_data/
+generated_data/
+*.tmp
+
+# Local test configurations
+local_test_config.yaml
+local_test_settings.json
+
+# GCP emulator data
+emulator_data/
+
+# Performance test artifacts
+locust-report/
+k6-report/
+jmeter-report/
+performance-results/
+
+# E2E test artifacts
+cypress/videos/
+cypress/screenshots/
+playwright-report/
+test-results/
+allure-results/
+allure-report/
+
+# Mock service data
+mock_service_data/
+
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js specific (for web testing)
+node_modules/
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
