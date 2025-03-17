@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/app
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - TEST_ENV=test
+      - BIGQUERY_EMULATOR_HOST=bigquery-emulator:9050
+      - STORAGE_EMULATOR_HOST=storage-emulator:9023
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - MOCK_API_HOST=mock-api:1080
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test_pipeline
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - db
+      - redis
+      - bigquery-emulator
+      - storage-emulator
+      - pubsub-emulator
+      - mock-api
+    command: ["pytest"]
+
+  db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test_pipeline
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./mock_data/cloudsql/sample_schema.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: "10s"
+      timeout: "5s"
+      retries: 5
+
+  bigquery-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "bigquery", "start", "--host-port=0.0.0.0:9050"]
+    ports:
+      - "9050:9050"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+
+  storage-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "storage", "start", "--host-port=0.0.0.0:9023"]
+    ports:
+      - "9023:9023"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+
+  pubsub-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085"]
+    ports:
+      - "8085:8085"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+
+  mock-api:
+    image: mockserver/mockserver:latest
+    ports:
+      - "1080:1080"
+    environment:
+      - MOCKSERVER_WATCH_INITIALIZATION_JSON=true
+    volumes:
+      - ./mock_data/api:/mockserver/mockserver_data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  test-network:
