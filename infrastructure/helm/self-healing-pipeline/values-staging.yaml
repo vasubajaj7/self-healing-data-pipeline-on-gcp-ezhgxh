@@ -1,0 +1,238 @@
+# Staging environment configuration for the self-healing data pipeline
+# Overrides default values with staging-specific settings
+
+global:
+  environment: staging
+  project:
+    id: self-healing-pipeline-staging
+    region: us-central1
+  image:
+    tag: rc  # Use release candidate tag for staging
+    pullPolicy: IfNotPresent
+
+backend:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: '750m'
+      memory: '1.5Gi'
+    limits:
+      cpu: '1500m'
+      memory: '3Gi'
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
+  podAnnotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/port: '8081'
+    prometheus.io/path: '/metrics'
+  nodeSelector:
+    cloud.google.com/gke-nodepool: staging-backend-pool
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: component
+              operator: In
+              values:
+              - backend
+          topologyKey: kubernetes.io/hostname
+
+web:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: '300m'
+      memory: '384Mi'
+    limits:
+      cpu: '750m'
+      memory: '768Mi'
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+  nodeSelector:
+    cloud.google.com/gke-nodepool: staging-web-pool
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: component
+              operator: In
+              values:
+              - web
+          topologyKey: kubernetes.io/hostname
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/proxy-body-size: '10m'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '60'
+  hosts:
+    - host: staging-pipeline.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: backend
+          port: 8080
+  tls:
+    - secretName: staging-pipeline-tls
+      hosts:
+        - staging-pipeline.example.com
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: '15s'
+      scrapeTimeout: '10s'
+    resources:
+      requests:
+        cpu: '300m'
+        memory: '768Mi'
+      limits:
+        cpu: '750m'
+        memory: '1.5Gi'
+    retention: '7d'
+    storageClass: standard
+    storageSize: '30Gi'
+  grafana:
+    enabled: true
+    adminPassword: staging-grafana-password
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+    resources:
+      requests:
+        cpu: '150m'
+        memory: '192Mi'
+      limits:
+        cpu: '300m'
+        memory: '384Mi'
+    persistence:
+      enabled: true
+      storageClassName: standard
+      size: '8Gi'
+  alertmanager:
+    enabled: true
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['job', 'alertname', 'severity']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 6h
+        receiver: staging-team-email
+        routes:
+        - match:
+            severity: critical
+          receiver: staging-teams-critical
+          repeat_interval: 1h
+        - match:
+            severity: warning
+          receiver: staging-team-email
+          repeat_interval: 3h
+      receivers:
+      - name: staging-team-email
+        email_configs:
+        - to: staging-alerts@example.com
+          send_resolved: true
+      - name: staging-teams-critical
+        webhook_configs:
+        - url: https://staging-webhook.example.com/teams
+          send_resolved: true
+        email_configs:
+        - to: staging-critical@example.com
+          send_resolved: true
+    resources:
+      requests:
+        cpu: '75m'
+        memory: '96Mi'
+      limits:
+        cpu: '150m'
+        memory: '192Mi'
+
+security:
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: staging-service-account@self-healing-pipeline-staging.iam.gserviceaccount.com
+  rbac:
+    create: true
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+  networkPolicy:
+    enabled: true
+    additionalRules: []
+  certManager:
+    enabled: true
+    issuer:
+      name: letsencrypt-staging
+      kind: ClusterIssuer
+      server: https://acme-staging-v02.api.letsencrypt.org/directory
+      email: admin@example.com
+
+config:
+  pipeline:
+    logLevel: INFO
+    enableMetrics: true
+    enableTracing: true
+    gcsBucket: self-healing-pipeline-staging
+    bigqueryDataset: self_healing_pipeline_staging
+  quality:
+    validationTimeoutSeconds: 300
+    qualityScoreThreshold: 90
+    enableAutoValidation: true
+  healing:
+    mode: semi-automatic
+    confidenceThreshold: 90
+    maxRetryAttempts: 3
+    approvalRequired: high-impact-only
+    learningMode: active
+  featureFlags:
+    enableExperimentalFeatures: false
+    enableDebugMode: false
+    enablePerformanceTesting: true
+    enableMockData: false
+  secrets:
+    databaseCredentials:
+      create: true
+      cloudsqlUser: pipeline_staging
+      cloudsqlPassword: ""
+      cloudsqlConnectionName: self-healing-pipeline-staging:us-central1:pipeline-staging-db
+    apiKeys:
+      create: true
+      externalApiKey: ""
+    oauthCredentials:
+      create: true
+      clientId: ""
+      clientSecret: ""
