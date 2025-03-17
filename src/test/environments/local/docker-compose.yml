@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for test metadata storage
+  db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test_pipeline
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_test_db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching and message queuing in test environment
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # BigQuery emulator
+  bigquery-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "bigquery", "start", "--host-port=0.0.0.0:9050"]
+    ports:
+      - "9050:9050"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+    restart: unless-stopped
+
+  # Cloud Storage emulator
+  storage-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "storage", "start", "--host-port=0.0.0.0:9023"]
+    ports:
+      - "9023:9023"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+    restart: unless-stopped
+
+  # Pub/Sub emulator
+  pubsub-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085"]
+    ports:
+      - "8085:8085"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+    restart: unless-stopped
+
+  # Mock server for simulating external API endpoints
+  mock-api:
+    image: mockserver/mockserver:latest
+    ports:
+      - "1080:1080"
+    environment:
+      - MOCKSERVER_WATCH_INITIALIZATION_JSON=true
+    volumes:
+      - ../../mock_data/api:/mockserver/mockserver_data
+    restart: unless-stopped
+
+  # Apache Airflow for pipeline orchestration testing
+  airflow:
+    image: apache/airflow:2.5.1
+    depends_on:
+      - db
+      - redis
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:postgres@db:5432/test_airflow
+      - AIRFLOW__CORE__FERNET_KEY=
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _AIRFLOW_DB_UPGRADE=True
+      - _AIRFLOW_WWW_USER_CREATE=True
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+    volumes:
+      - ../../../backend/airflow/dags:/opt/airflow/dags
+      - ../../../backend/airflow/plugins:/opt/airflow/plugins
+      - ../../../backend/airflow/config:/opt/airflow/config
+      - ../../mock_data:/opt/airflow/mock_data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command: ["webserver"]
+
+  # Airflow scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.5.1
+    depends_on:
+      - airflow
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:postgres@db:5432/test_airflow
+      - AIRFLOW__CORE__FERNET_KEY=
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ../../../backend/airflow/dags:/opt/airflow/dags
+      - ../../../backend/airflow/plugins:/opt/airflow/plugins
+      - ../../../backend/airflow/config:/opt/airflow/config
+      - ../../mock_data:/opt/airflow/mock_data
+    command: ["scheduler"]
+
+  # Great Expectations for data quality validation
+  great-expectations:
+    image: python:3.9-slim
+    volumes:
+      - ./great_expectations:/great_expectations
+      - ../../mock_data:/data
+    working_dir: /great_expectations
+    command: ["tail", "-f", "/dev/null"]
+    restart: unless-stopped
+
+  # Test runner for executing tests against all services
+  test-runner:
+    image: python:3.9-slim
+    volumes:
+      - ../../../:/app
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app
+      - TEST_CONFIG_PATH=/app/src/test/environments/local/config.yaml
+      - BIGQUERY_EMULATOR_HOST=bigquery-emulator:9050
+      - STORAGE_EMULATOR_HOST=storage-emulator:9023
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - MOCK_API_HOST=mock-api:1080
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test_pipeline
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AIRFLOW_HOST=airflow
+      - AIRFLOW_PORT=8080
+    depends_on:
+      - db
+      - redis
+      - bigquery-emulator
+      - storage-emulator
+      - pubsub-emulator
+      - mock-api
+      - airflow
+    command: ["tail", "-f", "/dev/null"]
+
+volumes:
+  postgres_data:
+    # Persistent volume for PostgreSQL data
+  redis_data:
+    # Persistent volume for Redis data
+
+networks:
+  test-pipeline-network:
+    # Internal network for test pipeline services
