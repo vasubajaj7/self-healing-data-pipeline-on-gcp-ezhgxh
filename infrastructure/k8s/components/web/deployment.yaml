@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: web
+    environment: ${ENV}
+    managed-by: kustomize
+  annotations:
+    description: "Web UI for the self-healing data pipeline"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: self-healing-pipeline
+      component: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  minReadySeconds: 20
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        app: self-healing-pipeline
+        component: web
+        environment: ${ENV}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: pipeline-web-sa
+      containers:
+      - name: web
+        image: gcr.io/${PROJECT_ID}/self-healing-pipeline/web:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENVIRONMENT
+        - name: API_URL
+          value: "http://backend-service:8080"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: LOG_LEVEL
+        - name: ENABLE_METRICS
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENABLE_METRICS
+        - name: ENABLE_TRACING
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENABLE_TRACING
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - self-healing-pipeline
+                - key: component
+                  operator: In
+                  values:
+                  - web
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 2000
