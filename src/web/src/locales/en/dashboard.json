@@ -1,0 +1,143 @@
+{
+  "title": "Dashboard",
+  "overview": "Dashboard Overview",
+  "lastRefreshed": "Last refreshed: {{time}}",
+  "refresh": "Refresh",
+  "viewAll": "View All",
+  "viewDetails": "View Details",
+  "timeRanges": {
+    "last24Hours": "Last 24 Hours",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "lastMonth": "Last Month",
+    "lastQuarter": "Last Quarter",
+    "lastYear": "Last Year",
+    "custom": "Custom Range"
+  },
+  "filters": {
+    "timeRange": "Time Range",
+    "apply": "Apply Filters",
+    "clear": "Clear Filters",
+    "from": "From",
+    "to": "To"
+  },
+  "pipelineHealth": {
+    "title": "Pipeline Health",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "error": "Error",
+    "inactive": "Inactive",
+    "totalPipelines": "Total Pipelines",
+    "healthScore": "Health Score",
+    "successRate": "Success Rate",
+    "failureRate": "Failure Rate",
+    "averageDuration": "Avg. Duration"
+  },
+  "dataQuality": {
+    "title": "Data Quality",
+    "qualityScore": "Quality Score",
+    "passRate": "Pass Rate",
+    "failRate": "Fail Rate",
+    "validationsPassed": "Validations Passed",
+    "validationsFailed": "Validations Failed",
+    "totalValidations": "Total Validations",
+    "trend": "Quality Trend"
+  },
+  "selfHealing": {
+    "title": "Self-Healing",
+    "autoFixRate": "Auto-Fix Rate",
+    "issuesDetected": "Issues Detected",
+    "issuesResolved": "Issues Resolved",
+    "manualIntervention": "Manual Intervention",
+    "averageResolutionTime": "Avg. Resolution Time",
+    "activeIssues": "Active Issues",
+    "resolvedIssues": "Resolved Issues"
+  },
+  "alerts": {
+    "title": "Active Alerts",
+    "noAlerts": "No active alerts",
+    "severity": "Severity",
+    "message": "Message",
+    "component": "Component",
+    "time": "Time",
+    "timeAgo": "{{time}} ago",
+    "status": "Status",
+    "source": "Source",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "total": "Total Alerts",
+    "acknowledged": "Acknowledged",
+    "unacknowledged": "Unacknowledged",
+    "inProgress": "In Progress",
+    "selfHealing": "Self-healing"
+  },
+  "recentExecutions": {
+    "title": "Recent Executions",
+    "noExecutions": "No recent executions",
+    "pipeline": "Pipeline",
+    "status": "Status",
+    "startTime": "Start Time",
+    "duration": "Duration",
+    "completed": "Completed",
+    "failed": "Failed",
+    "running": "Running",
+    "pending": "Pending",
+    "cancelled": "Cancelled"
+  },
+  "systemStatus": {
+    "title": "System Status",
+    "component": "Component",
+    "status": "Status",
+    "lastChecked": "Last Checked",
+    "gcsConnector": "GCS Connector",
+    "cloudSQL": "Cloud SQL",
+    "externalAPIs": "External APIs",
+    "bigQuery": "BigQuery",
+    "mlServices": "ML Services",
+    "ok": "OK",
+    "warning": "Warning",
+    "error": "Error",
+    "unknown": "Unknown"
+  },
+  "aiInsights": {
+    "title": "AI Insights",
+    "noInsights": "No insights available",
+    "predictedSlowdown": "Predicted slowdown in {{pipeline}}",
+    "recurringNulls": "Recurring nulls in {{field}}",
+    "queryOptimization": "Query optimization available for {{table}}",
+    "potentialFailure": "Potential failure detected in {{component}}",
+    "dataQualityIssue": "Data quality issue predicted for {{dataset}}",
+    "resourceUtilization": "Resource utilization approaching threshold for {{resource}}",
+    "viewRecommendation": "View Recommendation"
+  },
+  "quickStats": {
+    "title": "Quick Stats",
+    "activePipelines": "Active Pipelines",
+    "pendingJobs": "Pending Jobs",
+    "alertRate": "Alert Rate",
+    "dataProcessed": "Data Processed",
+    "successfulJobs": "Successful Jobs",
+    "failedJobs": "Failed Jobs",
+    "totalJobs": "Total Jobs",
+    "uptime": "System Uptime"
+  },
+  "metrics": {
+    "count": "Count",
+    "percentage": "Percentage",
+    "trend": "Trend",
+    "increasing": "Increasing",
+    "decreasing": "Decreasing",
+    "stable": "Stable",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly"
+  },
+  "errors": {
+    "loadingFailed": "Failed to load dashboard data",
+    "retry": "Retry",
+    "contactSupport": "Contact Support",
+    "dataUnavailable": "Data currently unavailable"
+  }
+}
