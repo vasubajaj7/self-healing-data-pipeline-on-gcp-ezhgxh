@@ -1,0 +1,395 @@
+# Self-Healing AI Engine Configuration
+# This file configures the autonomous healing capabilities of the data pipeline
+# Version: 1.0.0
+
+# Global settings apply to all healing operations unless overridden
+global_settings:
+  healing_mode: SEMI_AUTOMATIC  # Options: AUTOMATIC, SEMI_AUTOMATIC, MANUAL, LEARNING_ONLY
+  confidence_threshold: 0.85    # Default confidence threshold for taking actions (0.0-1.0)
+  max_retry_attempts: 3         # Maximum retry attempts for any healing action
+  approval_required: high_impact_only  # Options: always, high_impact_only, critical_only, never
+  learning_mode: active         # Options: active, passive, disabled
+  logging_level: INFO           # Options: DEBUG, INFO, WARNING, ERROR
+
+# Define the types of healing actions available to the system
+action_types:
+  DATA_CORRECTION:
+    enabled: true
+    confidence_threshold: 0.9
+    max_retry_attempts: 2
+    approval_required: high_impact_only
+    description: "Automatically correct data quality issues such as missing values, outliers, and format errors"
+  
+  PIPELINE_RETRY:
+    enabled: true
+    confidence_threshold: 0.8
+    max_retry_attempts: 3
+    approval_required: critical_only
+    description: "Retry failed pipeline tasks with intelligent backoff and parameter adjustments"
+  
+  PARAMETER_ADJUSTMENT:
+    enabled: true
+    confidence_threshold: 0.85
+    max_retry_attempts: 2
+    approval_required: high_impact_only
+    description: "Dynamically adjust pipeline parameters to resolve execution issues"
+  
+  RESOURCE_SCALING:
+    enabled: true
+    confidence_threshold: 0.85
+    max_retry_attempts: 2
+    approval_required: always
+    description: "Adjust resource allocation to resolve resource-related failures"
+  
+  SCHEMA_EVOLUTION:
+    enabled: false
+    confidence_threshold: 0.95
+    max_retry_attempts: 1
+    approval_required: always
+    description: "Handle schema changes and evolution in data sources"
+  
+  DEPENDENCY_RESOLUTION:
+    enabled: true
+    confidence_threshold: 0.85
+    max_retry_attempts: 3
+    approval_required: high_impact_only
+    description: "Resolve dependency issues between pipeline components"
+
+# Define specific healing rules
+rules:
+  # Data quality correction rules
+  - rule_id: missing_values_correction
+    name: "Missing Values Correction"
+    description: "Correct missing values in datasets using appropriate imputation strategies"
+    action_type: DATA_CORRECTION
+    enabled: true
+    priority: high
+    issue_patterns:
+      - null_values
+      - empty_strings
+      - missing_records
+    actions:
+      - strategy: mean_imputation
+        parameters:
+          applicable_types:
+            - numeric
+            - float
+            - integer
+          min_non_null_ratio: 0.5
+      
+      - strategy: median_imputation
+        parameters:
+          applicable_types:
+            - numeric
+            - float
+            - integer
+          outlier_sensitive: true
+      
+      - strategy: mode_imputation
+        parameters:
+          applicable_types:
+            - categorical
+            - string
+            - boolean
+      
+      - strategy: constant_imputation
+        parameters:
+          applicable_types:
+            - any
+          default_values:
+            string: ""
+            numeric: 0
+            boolean: false
+            date: "1970-01-01"
+  
+  - rule_id: outlier_correction
+    name: "Outlier Correction"
+    description: "Detect and correct outliers in numeric data"
+    action_type: DATA_CORRECTION
+    enabled: true
+    priority: medium
+    issue_patterns:
+      - statistical_outliers
+      - range_violations
+      - anomalous_values
+    actions:
+      - strategy: winsorization
+        parameters:
+          limits: [0.05, 0.05]
+          applicable_types:
+            - numeric
+            - float
+            - integer
+      
+      - strategy: iqr_filtering
+        parameters:
+          factor: 1.5
+          replacement: median
+      
+      - strategy: z_score_filtering
+        parameters:
+          threshold: 3.0
+          replacement: mean
+  
+  - rule_id: format_error_correction
+    name: "Format Error Correction"
+    description: "Correct format errors in data fields"
+    action_type: DATA_CORRECTION
+    enabled: true
+    priority: high
+    issue_patterns:
+      - date_format_errors
+      - number_format_errors
+      - string_format_errors
+    actions:
+      - strategy: date_format_correction
+        parameters:
+          source_formats:
+            - MM/dd/yyyy
+            - dd-MM-yyyy
+            - yyyy.MM.dd
+          target_format: yyyy-MM-dd
+      
+      - strategy: number_format_correction
+        parameters:
+          decimal_separator: "."
+          thousands_separator: ","
+          remove_currency_symbols: true
+      
+      - strategy: string_format_correction
+        parameters:
+          case: preserve
+          trim_whitespace: true
+          remove_special_chars: false
+  
+  # Pipeline execution rules
+  - rule_id: pipeline_retry
+    name: "Intelligent Pipeline Retry"
+    description: "Retry failed pipeline tasks with intelligent backoff"
+    action_type: PIPELINE_RETRY
+    enabled: true
+    priority: critical
+    issue_patterns:
+      - transient_failure
+      - timeout
+      - connection_error
+      - resource_contention
+    actions:
+      - strategy: exponential_backoff
+        parameters:
+          initial_delay_seconds: 60
+          max_delay_seconds: 3600
+          backoff_factor: 2.0
+          jitter_factor: 0.1
+      
+      - strategy: linear_backoff
+        parameters:
+          initial_delay_seconds: 60
+          delay_increment_seconds: 60
+          max_delay_seconds: 1800
+  
+  - rule_id: timeout_adjustment
+    name: "Timeout Parameter Adjustment"
+    description: "Adjust timeout parameters for tasks that consistently time out"
+    action_type: PARAMETER_ADJUSTMENT
+    enabled: true
+    priority: high
+    issue_patterns:
+      - timeout
+      - long_running_task
+    actions:
+      - strategy: increase_timeout
+        parameters:
+          multiplier: 2.0
+          max_timeout_seconds: 7200
+          increment_factor: 1.5
+      
+      - strategy: optimize_execution
+        parameters:
+          batch_size_adjustment: true
+          parallelism_adjustment: true
+          resource_adjustment: true
+  
+  # Resource management rules
+  - rule_id: memory_scaling
+    name: "Memory Resource Scaling"
+    description: "Scale memory resources for tasks that fail due to memory constraints"
+    action_type: RESOURCE_SCALING
+    enabled: true
+    priority: high
+    issue_patterns:
+      - out_of_memory
+      - memory_limit_exceeded
+    actions:
+      - strategy: increase_memory
+        parameters:
+          multiplier: 1.5
+          max_memory_gb: 16
+          step_size_gb: 2
+      
+      - strategy: optimize_memory_usage
+        parameters:
+          chunk_processing: true
+          garbage_collection: true
+          memory_efficient_algorithms: true
+  
+  - rule_id: cpu_scaling
+    name: "CPU Resource Scaling"
+    description: "Scale CPU resources for compute-intensive tasks"
+    action_type: RESOURCE_SCALING
+    enabled: true
+    priority: medium
+    issue_patterns:
+      - cpu_limit_exceeded
+      - slow_processing
+    actions:
+      - strategy: increase_cpu
+        parameters:
+          multiplier: 2.0
+          max_cpu_count: 8
+          step_size: 2
+      
+      - strategy: optimize_cpu_usage
+        parameters:
+          parallel_processing: true
+          task_prioritization: true
+  
+  # Schema management rules
+  - rule_id: schema_drift_handling
+    name: "Schema Drift Handling"
+    description: "Handle schema changes in source data"
+    action_type: SCHEMA_EVOLUTION
+    enabled: false
+    priority: high
+    issue_patterns:
+      - schema_mismatch
+      - missing_column
+      - data_type_mismatch
+    actions:
+      - strategy: column_mapping
+        parameters:
+          auto_map_similar_names: true
+          case_insensitive_mapping: true
+          fuzzy_matching_threshold: 0.8
+      
+      - strategy: type_casting
+        parameters:
+          auto_cast_compatible_types: true
+          strict_mode: false
+      
+      - strategy: default_values
+        parameters:
+          add_missing_columns: true
+          default_values:
+            string: ""
+            numeric: 0
+            boolean: false
+            date: "1970-01-01"
+  
+  # Dependency management rules
+  - rule_id: dependency_resolution
+    name: "Dependency Resolution"
+    description: "Resolve dependency issues between pipeline components"
+    action_type: DEPENDENCY_RESOLUTION
+    enabled: true
+    priority: high
+    issue_patterns:
+      - dependency_failure
+      - upstream_task_failed
+      - missing_dependency
+    actions:
+      - strategy: retry_with_backoff
+        parameters:
+          initial_delay_seconds: 120
+          max_delay_seconds: 3600
+          backoff_factor: 2.0
+          max_retries: 5
+      
+      - strategy: skip_dependency
+        parameters:
+          only_non_critical: true
+          provide_default_data: true
+          mark_as_conditional: true
+
+# Group rules into logical sets for easier management
+rule_sets:
+  data_quality:
+    - missing_values_correction
+    - outlier_correction
+    - format_error_correction
+  
+  pipeline_execution:
+    - pipeline_retry
+    - timeout_adjustment
+  
+  resource_management:
+    - memory_scaling
+    - cpu_scaling
+  
+  schema_management:
+    - schema_drift_handling
+  
+  dependency_management:
+    - dependency_resolution
+  
+  critical_fixes:
+    - pipeline_retry
+    - missing_values_correction
+    - memory_scaling
+    - dependency_resolution
+
+# Define behavior based on severity levels
+severity_thresholds:
+  critical:
+    confidence_threshold: 0.95
+    approval_required: always
+    max_retry_attempts: 1
+    notification_channels:
+      - email
+      - teams
+      - sms
+  
+  high:
+    confidence_threshold: 0.9
+    approval_required: high_impact_only
+    max_retry_attempts: 2
+    notification_channels:
+      - email
+      - teams
+  
+  medium:
+    confidence_threshold: 0.85
+    approval_required: high_impact_only
+    max_retry_attempts: 3
+    notification_channels:
+      - teams
+  
+  low:
+    confidence_threshold: 0.8
+    approval_required: never
+    max_retry_attempts: 3
+    notification_channels:
+      - teams
+
+# Settings for the learning component of the self-healing system
+learning_settings:
+  feedback_collection: true
+  model_update_frequency: weekly  # Options: daily, weekly, monthly, on_demand
+  minimum_samples_required: 50
+  success_threshold_for_automation: 0.9
+  failure_threshold_for_disabling: 0.3
+  store_training_examples: true
+  max_training_examples: 10000
+
+# Configuration for notifications
+notification_settings:
+  teams_webhook_url: "https://company.webhook.office.com/webhookb2/123456/IncomingWebhook/abcdef"
+  email_recipients:
+    - "data-engineering@example.com"
+    - "operations@example.com"
+  sms_recipients:
+    - "+1234567890"
+  notification_format:
+    include_details: true
+    include_actions_taken: true
+    include_recommendations: true
