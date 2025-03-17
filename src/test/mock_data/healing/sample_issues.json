@@ -1,0 +1,391 @@
+[
+  {
+    "issue_id": "issue-001",
+    "issue_category": "data_quality",
+    "issue_type": "outliers",
+    "pipeline_id": "sales_metrics",
+    "dataset": "sales_data",
+    "table": "daily_sales",
+    "column": "value",
+    "description": "Values exceeding the maximum threshold of 100.0",
+    "detection_time": "2023-06-15T10:15:05Z",
+    "severity": "MEDIUM",
+    "details": {
+      "rule_id": "rule_006",
+      "validation_id": "val_20230615_001",
+      "expected_max": 100.0,
+      "unexpected_values": [105.2, 110.5, 103.7, 101.2, 102.8],
+      "unexpected_count": 5,
+      "unexpected_percent": 1.0,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_001",
+      "task_id": "validate_sales_data",
+      "environment": "production"
+    },
+    "potential_actions": ["capping", "removal", "scaling"]
+  },
+  {
+    "issue_id": "issue-002",
+    "issue_category": "data_quality",
+    "issue_type": "format_errors",
+    "pipeline_id": "customer_data",
+    "dataset": "customer_profiles",
+    "table": "customer_activity",
+    "column": "timestamp",
+    "description": "Invalid date format detected in timestamp column",
+    "detection_time": "2023-06-15T10:15:15Z",
+    "severity": "HIGH",
+    "details": {
+      "rule_id": "rule_008",
+      "validation_id": "val_20230615_002",
+      "expected_format": "ISO-8601",
+      "unexpected_values": ["invalid-date", "2023/13/45", "not-a-date"],
+      "unexpected_count": 3,
+      "unexpected_percent": 0.6,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_002",
+      "task_id": "validate_customer_activity",
+      "environment": "production"
+    },
+    "potential_actions": ["standardization", "removal"]
+  },
+  {
+    "issue_id": "issue-003",
+    "issue_category": "data_quality",
+    "issue_type": "data_corruption",
+    "pipeline_id": "product_enrich",
+    "dataset": "product_catalog",
+    "table": "product_details",
+    "column": "value",
+    "description": "Inconsistent aggregation across category groups",
+    "detection_time": "2023-06-15T10:15:25Z",
+    "severity": "HIGH",
+    "details": {
+      "rule_id": "rule_011",
+      "validation_id": "val_20230615_003",
+      "group_column": "category",
+      "expected_sum": 30,
+      "actual_sum": 30,
+      "group_values": {"A": 8, "B": 12, "C": 5, "D": 5},
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_003",
+      "task_id": "validate_product_details",
+      "environment": "production"
+    },
+    "potential_actions": ["transformation", "recomputation"]
+  },
+  {
+    "issue_id": "issue-004",
+    "issue_category": "data_quality",
+    "issue_type": "missing_values",
+    "pipeline_id": "customer_data",
+    "dataset": "customer_profiles",
+    "table": "customer_details",
+    "column": "name",
+    "description": "Missing values in required name column",
+    "detection_time": "2023-06-15T10:15:35Z",
+    "severity": "MEDIUM",
+    "details": {
+      "rule_id": "rule_013",
+      "validation_id": "val_20230615_004",
+      "unexpected_count": 25,
+      "unexpected_percent": 5.0,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_004",
+      "task_id": "validate_customer_details",
+      "environment": "production"
+    },
+    "potential_actions": ["imputation", "default_value"]
+  },
+  {
+    "issue_id": "issue-005",
+    "issue_category": "data_quality",
+    "issue_type": "referential_integrity",
+    "pipeline_id": "sales_metrics",
+    "dataset": "sales_data",
+    "table": "transactions",
+    "column": "id",
+    "description": "Duplicate IDs detected in primary key column",
+    "detection_time": "2023-06-15T10:15:45Z",
+    "severity": "CRITICAL",
+    "details": {
+      "rule_id": "rule_014",
+      "validation_id": "val_20230615_005",
+      "unexpected_values": ["DUP001", "DUP002", "DUP003"],
+      "unexpected_count": 6,
+      "unexpected_percent": 1.2,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_005",
+      "task_id": "validate_transactions",
+      "environment": "production"
+    },
+    "potential_actions": ["deduplication", "row_removal"]
+  },
+  {
+    "issue_id": "issue-006",
+    "issue_category": "data_quality",
+    "issue_type": "data_corruption",
+    "pipeline_id": "product_enrich",
+    "dataset": "product_catalog",
+    "table": "product_categories",
+    "column": "category",
+    "description": "Invalid category values not in allowed set",
+    "detection_time": "2023-06-15T10:15:55Z",
+    "severity": "MEDIUM",
+    "details": {
+      "rule_id": "rule_015",
+      "validation_id": "val_20230615_006",
+      "allowed_values": ["A", "B", "C", "D"],
+      "unexpected_values": ["E", "F", "X"],
+      "unexpected_count": 3,
+      "unexpected_percent": 0.6,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_006",
+      "task_id": "validate_product_categories",
+      "environment": "production"
+    },
+    "potential_actions": ["standardization", "removal"]
+  },
+  {
+    "issue_id": "issue-007",
+    "issue_category": "data_quality",
+    "issue_type": "schema_drift",
+    "pipeline_id": "inventory_sync",
+    "dataset": "inventory",
+    "table": "stock_levels",
+    "column": null,
+    "description": "Unexpected column detected in table schema",
+    "detection_time": "2023-06-15T10:16:05Z",
+    "severity": "HIGH",
+    "details": {
+      "rule_id": "rule_016",
+      "validation_id": "val_20230615_007",
+      "expected_columns": ["id", "name", "value", "timestamp", "category"],
+      "observed_columns": ["id", "name", "value", "timestamp", "category", "new_column"],
+      "unexpected_columns": ["new_column"],
+      "missing_columns": []
+    },
+    "context": {
+      "execution_id": "exec_20230615_007",
+      "task_id": "validate_stock_levels",
+      "environment": "production"
+    },
+    "potential_actions": ["schema_evolution", "schema_mapping"]
+  },
+  {
+    "issue_id": "issue-008",
+    "issue_category": "data_quality",
+    "issue_type": "format_errors",
+    "pipeline_id": "sales_metrics",
+    "dataset": "sales_data",
+    "table": "product_sales",
+    "column": "value",
+    "description": "Non-numeric values in numeric column",
+    "detection_time": "2023-06-15T10:16:15Z",
+    "severity": "HIGH",
+    "details": {
+      "rule_id": "rule_017",
+      "validation_id": "val_20230615_008",
+      "expected_type": "FLOAT",
+      "unexpected_values": ["abc", "N/A", "unknown"],
+      "unexpected_count": 3,
+      "unexpected_percent": 0.6,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_008",
+      "task_id": "validate_product_sales",
+      "environment": "production"
+    },
+    "potential_actions": ["type_conversion", "parsing", "removal"]
+  },
+  {
+    "issue_id": "issue-009",
+    "issue_category": "data_quality",
+    "issue_type": "referential_integrity",
+    "pipeline_id": "product_enrich",
+    "dataset": "product_catalog",
+    "table": "product_details",
+    "column": "category_id",
+    "description": "Foreign key values not found in reference table",
+    "detection_time": "2023-06-15T10:16:25Z",
+    "severity": "HIGH",
+    "details": {
+      "rule_id": "rule_018",
+      "validation_id": "val_20230615_009",
+      "reference_table": "categories",
+      "reference_column": "id",
+      "unexpected_values": [101, 102, 103],
+      "unexpected_count": 3,
+      "unexpected_percent": 0.6,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_009",
+      "task_id": "validate_product_details",
+      "environment": "production"
+    },
+    "potential_actions": ["reference_repair", "removal"]
+  },
+  {
+    "issue_id": "issue-010",
+    "issue_category": "data_quality",
+    "issue_type": "outliers",
+    "pipeline_id": "analytics_daily",
+    "dataset": "analytics",
+    "table": "user_metrics",
+    "column": "value",
+    "description": "Non-normal distribution detected in value column",
+    "detection_time": "2023-06-15T10:16:35Z",
+    "severity": "LOW",
+    "details": {
+      "rule_id": "rule_019",
+      "validation_id": "val_20230615_010",
+      "expected_distribution": "normal",
+      "p_value": 0.01,
+      "skewness": 1.8,
+      "kurtosis": 5.2,
+      "total_records": 500
+    },
+    "context": {
+      "execution_id": "exec_20230615_010",
+      "task_id": "validate_user_metrics",
+      "environment": "production"
+    },
+    "potential_actions": ["transformation", "outlier_treatment"]
+  },
+  {
+    "issue_id": "issue-011",
+    "issue_category": "pipeline",
+    "issue_type": "resource_exhaustion",
+    "pipeline_id": "analytics_daily",
+    "dataset": null,
+    "table": null,
+    "column": null,
+    "description": "BigQuery slots exhausted during query execution",
+    "detection_time": "2023-06-15T10:16:45Z",
+    "severity": "CRITICAL",
+    "details": {
+      "error_message": "Quota exceeded: Your project exceeded quota for free query bytes scanned.",
+      "job_id": "project:region:job_20230615_001",
+      "resource_type": "BIGQUERY_SLOTS",
+      "current_usage": 2000,
+      "limit": 2000
+    },
+    "context": {
+      "execution_id": "exec_20230615_011",
+      "task_id": "aggregate_daily_metrics",
+      "environment": "production"
+    },
+    "potential_actions": ["resource_scaling", "query_optimization", "job_scheduling"]
+  },
+  {
+    "issue_id": "issue-012",
+    "issue_category": "pipeline",
+    "issue_type": "timeout",
+    "pipeline_id": "customer_data",
+    "dataset": null,
+    "table": null,
+    "column": null,
+    "description": "Task execution exceeded timeout limit",
+    "detection_time": "2023-06-15T10:16:55Z",
+    "severity": "HIGH",
+    "details": {
+      "error_message": "Task timed out after 3600 seconds",
+      "task_id": "extract_customer_data",
+      "timeout_limit": 3600,
+      "actual_duration": 3650
+    },
+    "context": {
+      "execution_id": "exec_20230615_012",
+      "task_id": "extract_customer_data",
+      "environment": "production"
+    },
+    "potential_actions": ["parameter_adjustment", "task_splitting", "resource_scaling"]
+  },
+  {
+    "issue_id": "issue-013",
+    "issue_category": "pipeline",
+    "issue_type": "dependency_failure",
+    "pipeline_id": "inventory_sync",
+    "dataset": null,
+    "table": null,
+    "column": null,
+    "description": "Upstream task failure caused dependent task to fail",
+    "detection_time": "2023-06-15T10:17:05Z",
+    "severity": "HIGH",
+    "details": {
+      "error_message": "Upstream task extract_inventory_data failed",
+      "failed_task_id": "extract_inventory_data",
+      "dependent_task_id": "transform_inventory_data",
+      "failure_reason": "API connection timeout"
+    },
+    "context": {
+      "execution_id": "exec_20230615_013",
+      "task_id": "transform_inventory_data",
+      "environment": "production"
+    },
+    "potential_actions": ["dependency_resolution", "pipeline_retry", "skip_failed_tasks"]
+  },
+  {
+    "issue_id": "issue-014",
+    "issue_category": "pipeline",
+    "issue_type": "configuration_error",
+    "pipeline_id": "finance_daily",
+    "dataset": null,
+    "table": null,
+    "column": null,
+    "description": "Invalid configuration parameter in pipeline definition",
+    "detection_time": "2023-06-15T10:17:15Z",
+    "severity": "MEDIUM",
+    "details": {
+      "error_message": "Invalid parameter value: partition_field cannot be empty for partitioned table",
+      "parameter_name": "partition_field",
+      "parameter_value": "",
+      "expected_value": "Non-empty string"
+    },
+    "context": {
+      "execution_id": "exec_20230615_014",
+      "task_id": "create_finance_table",
+      "environment": "production"
+    },
+    "potential_actions": ["parameter_adjustment", "configuration_update"]
+  },
+  {
+    "issue_id": "issue-015",
+    "issue_category": "pipeline",
+    "issue_type": "permission_error",
+    "pipeline_id": "vendor_data",
+    "dataset": null,
+    "table": null,
+    "column": null,
+    "description": "Insufficient permissions to access BigQuery dataset",
+    "detection_time": "2023-06-15T10:17:25Z",
+    "severity": "HIGH",
+    "details": {
+      "error_message": "Access Denied: Dataset vendor_data:vendor_metrics: Permission bigquery.tables.create denied on dataset vendor_data:vendor_metrics",
+      "resource_type": "BIGQUERY_DATASET",
+      "resource_name": "vendor_data:vendor_metrics",
+      "required_permission": "bigquery.tables.create",
+      "service_account": "pipeline-sa@project-id.iam.gserviceaccount.com"
+    },
+    "context": {
+      "execution_id": "exec_20230615_015",
+      "task_id": "create_vendor_metrics",
+      "environment": "production"
+    },
+    "potential_actions": ["permission_grant", "service_account_update"]
+  }
+]
