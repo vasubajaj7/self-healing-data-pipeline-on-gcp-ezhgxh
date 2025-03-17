@@ -1,0 +1,324 @@
+#==============================================================================
+# Self-Healing Data Pipeline Development Configuration
+#
+# This file defines development-specific configuration settings that override
+# the default values in default_config.yaml. It is optimized for local development,
+# debugging, and testing purposes.
+#==============================================================================
+
+#------------------------------------------------------------------------------
+# Application settings
+#------------------------------------------------------------------------------
+app:
+  name: self-healing-pipeline
+  version: 1.0.0
+  description: Self-healing data pipeline for BigQuery using Google Cloud services and AI-driven automation
+  environment: development
+
+#------------------------------------------------------------------------------
+# Logging configuration
+#------------------------------------------------------------------------------
+logging:
+  level: DEBUG  # Enhanced logging for development
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: logs/pipeline-dev.log
+  max_size_mb: 50
+  backup_count: 3
+  console_output: true
+
+#------------------------------------------------------------------------------
+# Google Cloud Platform settings
+#------------------------------------------------------------------------------
+gcp:
+  project_id: self-healing-pipeline-dev
+  location: us-central1
+  service_account: dev-service-account@self-healing-pipeline-dev.iam.gserviceaccount.com
+
+#------------------------------------------------------------------------------
+# BigQuery settings
+#------------------------------------------------------------------------------
+bigquery:
+  dataset: self_healing_pipeline_dev
+  location: US
+  query_timeout_seconds: 600
+  max_slots: 50
+  use_legacy_sql: false
+
+#------------------------------------------------------------------------------
+# Google Cloud Storage settings
+#------------------------------------------------------------------------------
+gcs:
+  bucket: self-healing-pipeline-dev
+  staging_folder: staging
+  archive_folder: archive
+  temp_folder: temp
+  data_folder: data
+  config_folder: config
+  retention_days:
+    staging: 30
+    archive: 60
+    temp: 7
+
+#------------------------------------------------------------------------------
+# Cloud Composer (Airflow) settings
+#------------------------------------------------------------------------------
+composer:
+  environment: self-healing-pipeline-dev
+  location: us-central1
+  dag_folder: dags
+  schedule_interval:
+    default: "0 */6 * * *"  # Every 6 hours
+    monitoring: "*/15 * * * *"  # Every 15 minutes
+    optimization: "0 0 * * 1"  # Weekly on Monday
+  catchup: false
+  max_active_runs: 3
+  retries: 2
+  retry_delay_minutes: 2
+
+#------------------------------------------------------------------------------
+# Data Ingestion settings
+#------------------------------------------------------------------------------
+ingestion:
+  batch_size: 500
+  max_batch_size: 2000
+  parallel_workers: 3
+  max_parallel_workers: 5
+  timeout_seconds: 600
+  retry_attempts: 3
+  retry_backoff_factor: 2.0
+  
+  sources:
+    gcs:
+      enabled: true
+      polling_interval_seconds: 120
+    
+    cloud_sql:
+      enabled: true
+      connection_pool_size: 3
+      max_connections: 5
+    
+    external_api:
+      enabled: true
+      request_timeout_seconds: 60
+      max_retries: 3
+      rate_limit_per_minute: 30
+    
+    third_party_db:
+      enabled: true
+      connection_timeout_seconds: 60
+
+#------------------------------------------------------------------------------
+# Data Quality settings
+#------------------------------------------------------------------------------
+quality:
+  validation:
+    enabled: true
+    timeout_seconds: 600
+    max_retries: 3
+    quality_threshold: 0.8  # Lower threshold for development
+    scoring_model: weighted
+    rules_path: configs/quality_rules.yaml
+    
+    great_expectations:
+      enabled: true
+      expectations_store: gcs
+      validations_store: gcs
+      data_docs_site: gcs
+  
+  issue_handling:
+    critical_threshold: 0.5  # More lenient for development
+    warning_threshold: 0.7
+    auto_fix_enabled: true
+    notification_on_failure: true
+
+#------------------------------------------------------------------------------
+# Self-Healing settings
+#------------------------------------------------------------------------------
+self_healing:
+  enabled: true
+  mode: SEMI_AUTOMATIC
+  confidence_threshold: 0.75  # Lower threshold for development
+  max_retry_attempts: 3
+  approval_required:
+    critical: true
+    high: false
+    medium: false
+    low: false
+  learning_enabled: true
+  rules_path: configs/healing_rules.yaml
+  
+  action_parameters:
+    data_correction:
+      confidence_threshold: 0.8
+      max_retries: 2
+      approval_required: false
+    
+    pipeline_adjustment:
+      confidence_threshold: 0.7
+      max_retries: 3
+      approval_required: false
+    
+    resource_optimization:
+      confidence_threshold: 0.6
+      max_retries: 2
+      approval_required: false
+    
+    recovery:
+      confidence_threshold: 0.75
+      max_retries: 3
+      approval_required: false
+  
+  model_registry:
+    path: models/dev
+    version_retention: 10
+    retraining_interval_days: 3
+
+#------------------------------------------------------------------------------
+# Monitoring and Alerting settings
+#------------------------------------------------------------------------------
+monitoring:
+  enabled: true
+  metrics_collection_interval_seconds: 120
+  log_analysis_enabled: true
+  
+  anomaly_detection:
+    enabled: true
+    sensitivity: 0.7
+    training_period_days: 7
+    min_data_points: 50
+  
+  alerting:
+    enabled: true
+    rules_path: configs/alert_rules.yaml
+    alert_deduplication_window_minutes: 5
+    alert_correlation_enabled: true
+    
+    notification_channels:
+      teams:
+        enabled: true
+        webhook_url: https://dev-webhook.example.com/teams
+        mention_on_critical: false
+      
+      email:
+        enabled: true
+        recipients: [dev-team@example.com]
+        send_on_severity: [CRITICAL, HIGH, MEDIUM, LOW]
+      
+      sms:
+        enabled: false
+        recipients: []
+        send_on_severity: [CRITICAL]
+      
+      webhook:
+        enabled: true
+        url: https://dev-webhook.example.com/alerts
+        send_on_severity: [CRITICAL, HIGH, MEDIUM, LOW]
+    
+    thresholds:
+      pipeline_failure_rate:
+        warning: 0.1
+        critical: 0.2
+        lookback_period_hours: 24
+      
+      data_processing_latency:
+        warning: 0.3
+        critical: 0.6
+        lookback_period_days: 7
+      
+      quality_validation_failure:
+        warning: 0.05
+        critical: 0.1
+        lookback_period_hours: 24
+      
+      self_healing_success_rate:
+        warning: 0.8
+        critical: 0.7
+        lookback_period_days: 7
+      
+      resource_utilization:
+        warning: 0.8
+        critical: 0.95
+        lookback_period_hours: 1
+      
+      error_rate:
+        warning: 3.0
+        critical: 7.0
+        lookback_period_days: 7
+  
+  dashboards:
+    refresh_interval_seconds: 60
+    default_time_range_hours: 24
+
+#------------------------------------------------------------------------------
+# Performance Optimization settings
+#------------------------------------------------------------------------------
+optimization:
+  enabled: true
+  schedule_interval: "0 0 * * 1"  # Weekly on Monday
+  
+  query_optimization:
+    enabled: true
+    min_execution_time_seconds: 5
+    min_bytes_processed: 536870912  # 512 MB
+    optimization_threshold: 0.2
+  
+  schema_optimization:
+    enabled: true
+    partitioning_analysis_enabled: true
+    clustering_analysis_enabled: true
+    min_table_size_gb: 0.5
+    min_query_count: 5
+  
+  resource_optimization:
+    enabled: true
+    slot_utilization_threshold: 0.7
+    idle_resource_threshold: 0.3
+    cost_optimization_enabled: true
+  
+  implementation:
+    auto_implement: true
+    approval_required: false
+    implementation_window: "0 0 * * 1"  # Weekly on Monday
+
+#------------------------------------------------------------------------------
+# API settings
+#------------------------------------------------------------------------------
+api:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000
+  debug: true  # Enable debug mode for development
+  
+  cors:
+    enabled: true
+    allow_origins: ["*"]
+    allow_methods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
+    allow_headers: ["*"]
+  
+  auth:
+    enabled: true
+    jwt_secret: dev-secret-key-replace-in-production
+    token_expiration_minutes: 1440  # 24 hours for development
+    refresh_token_expiration_days: 30
+  
+  rate_limiting:
+    enabled: false  # Disabled for development
+    requests_per_minute: 300
+    burst: 50
+
+#------------------------------------------------------------------------------
+# Security settings
+#------------------------------------------------------------------------------
+security:
+  encryption:
+    at_rest: true
+    in_transit: true
+    customer_managed_keys: false
+  
+  access_control:
+    strict_mode: false
+    review_interval_days: 90
+  
+  secrets:
+    use_secret_manager: false  # Simplified for development
+    rotation_interval_days: 90
