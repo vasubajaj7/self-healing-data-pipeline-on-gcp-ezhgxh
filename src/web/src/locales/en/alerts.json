@@ -1,0 +1,226 @@
+{
+  "dashboard": {
+    "title": "Alert Dashboard",
+    "activeAlerts": "Active Alerts",
+    "alertHistory": "Alert History",
+    "noActiveAlerts": "No active alerts at this time",
+    "refreshTooltip": "Refresh alerts",
+    "filterTooltip": "Filter alerts"
+  },
+  "tabs": {
+    "active": "Active Alerts",
+    "history": "Alert History",
+    "configuration": "Notification Configuration"
+  },
+  "filters": {
+    "title": "Filter Alerts",
+    "severity": "Severity",
+    "status": "Status",
+    "type": "Type",
+    "component": "Component",
+    "timeRange": "Time Range",
+    "search": "Search alerts...",
+    "apply": "Apply Filters",
+    "reset": "Reset Filters",
+    "noResults": "No alerts match your filters"
+  },
+  "table": {
+    "columns": {
+      "severity": "Severity",
+      "type": "Type",
+      "message": "Message",
+      "component": "Component",
+      "status": "Status",
+      "time": "Time",
+      "actions": "Actions",
+      "source": "Source",
+      "createdAt": "Created",
+      "acknowledgedBy": "Acknowledged By",
+      "acknowledgedAt": "Acknowledged At",
+      "resolvedBy": "Resolved By",
+      "resolvedAt": "Resolved At",
+      "duration": "Duration"
+    },
+    "emptyState": "No alerts to display",
+    "loading": "Loading alerts...",
+    "error": "Error loading alerts",
+    "retry": "Retry"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "status": {
+    "active": "Active",
+    "acknowledged": "Acknowledged",
+    "resolved": "Resolved",
+    "escalated": "Escalated",
+    "suppressed": "Suppressed"
+  },
+  "types": {
+    "dataQuality": "Data Quality",
+    "pipelineFailure": "Pipeline Failure",
+    "systemHealth": "System Health",
+    "performance": "Performance",
+    "security": "Security"
+  },
+  "actions": {
+    "menu": "Actions",
+    "acknowledge": "Acknowledge",
+    "resolve": "Resolve",
+    "escalate": "Escalate",
+    "suppress": "Suppress Similar",
+    "viewDetails": "View Details",
+    "viewRelated": "View Related Alerts"
+  },
+  "details": {
+    "title": "Alert Details",
+    "alertId": "Alert ID",
+    "executionId": "Execution ID",
+    "message": "Message",
+    "component": "Component",
+    "source": "Source",
+    "createdAt": "Created At",
+    "details": "Details",
+    "rootCause": "Root Cause Analysis",
+    "selfHealing": "Self-Healing Status",
+    "notificationHistory": "Notification History",
+    "relatedAlerts": "Related Alerts",
+    "noRelatedAlerts": "No related alerts found",
+    "suggestedActions": "Suggested Actions",
+    "noSuggestedActions": "No suggested actions available"
+  },
+  "dialogs": {
+    "acknowledge": {
+      "title": "Acknowledge Alert",
+      "description": "Acknowledge this alert to indicate you are working on it.",
+      "notes": "Notes (optional)",
+      "submit": "Acknowledge",
+      "cancel": "Cancel",
+      "success": "Alert acknowledged successfully",
+      "error": "Failed to acknowledge alert"
+    },
+    "resolve": {
+      "title": "Resolve Alert",
+      "description": "Mark this alert as resolved.",
+      "resolutionDetails": "Resolution details",
+      "rootCause": "Root cause (optional)",
+      "submit": "Resolve",
+      "cancel": "Cancel",
+      "success": "Alert resolved successfully",
+      "error": "Failed to resolve alert"
+    },
+    "escalate": {
+      "title": "Escalate Alert",
+      "description": "Escalate this alert to a higher priority level.",
+      "reason": "Escalation reason",
+      "level": "Escalation level",
+      "submit": "Escalate",
+      "cancel": "Cancel",
+      "success": "Alert escalated successfully",
+      "error": "Failed to escalate alert"
+    },
+    "suppress": {
+      "title": "Suppress Similar Alerts",
+      "description": "Temporarily suppress similar alerts to reduce noise.",
+      "reason": "Suppression reason",
+      "duration": "Duration (minutes)",
+      "submit": "Suppress",
+      "cancel": "Cancel",
+      "success": "Similar alerts suppressed successfully",
+      "error": "Failed to suppress similar alerts"
+    }
+  },
+  "stats": {
+    "title": "Alert Statistics",
+    "total": "Total Alerts",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "timeRange": "Last 24 hours",
+    "noData": "No alert data available"
+  },
+  "trends": {
+    "title": "Alert Trends",
+    "timeRanges": {
+      "24h": "24 Hours",
+      "7d": "7 Days",
+      "30d": "30 Days"
+    },
+    "yAxis": "Alert Count",
+    "xAxis": "Time",
+    "noData": "No trend data available"
+  },
+  "notifications": {
+    "title": "Notification Channels",
+    "teams": "Microsoft Teams",
+    "email": "Email",
+    "sms": "SMS",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "configured": "Configured",
+      "notConfigured": "Not Configured"
+    },
+    "sent": "Sent",
+    "pending": "Pending",
+    "failed": "Failed"
+  },
+  "config": {
+    "title": "Notification Configuration",
+    "channels": "Notification Channels",
+    "enableTeams": "Enable Microsoft Teams notifications",
+    "enableEmail": "Enable Email notifications",
+    "enableSMS": "Enable SMS notifications",
+    "teamsWebhook": "Teams Webhook URL",
+    "emailRecipients": "Email Recipients",
+    "emailSubjectPrefix": "Email Subject Prefix",
+    "includeDetails": "Include Alert Details",
+    "smsRecipients": "SMS Recipients",
+    "criticalOnly": "Critical Alerts Only",
+    "thresholds": "Alert Thresholds",
+    "minInterval": "Minimum Interval (minutes)",
+    "batchSize": "Batch Size",
+    "save": "Save Configuration",
+    "cancel": "Cancel",
+    "testNotification": "Send Test Notification",
+    "saveSuccess": "Configuration saved successfully",
+    "saveError": "Failed to save configuration",
+    "testSuccess": "Test notification sent successfully",
+    "testError": "Failed to send test notification"
+  },
+  "suggestedActions": {
+    "title": "Suggested Actions",
+    "confidence": "Confidence",
+    "impact": "Estimated Impact",
+    "execute": "Execute",
+    "viewDetails": "View Details",
+    "executionSuccess": "Action executed successfully",
+    "executionError": "Failed to execute action",
+    "noActions": "No suggested actions available"
+  },
+  "selfHealing": {
+    "status": {
+      "inProgress": "Self-healing in progress",
+      "succeeded": "Self-healing succeeded",
+      "failed": "Self-healing failed",
+      "notAttempted": "No self-healing attempted"
+    },
+    "confidence": "Confidence",
+    "action": "Action Taken",
+    "result": "Result",
+    "details": "Details"
+  },
+  "timeAgo": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}} minute ago",
+    "minutesAgo_plural": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hour ago",
+    "hoursAgo_plural": "{{count}} hours ago",
+    "daysAgo": "{{count}} day ago",
+    "daysAgo_plural": "{{count}} days ago"
+  }
+}
