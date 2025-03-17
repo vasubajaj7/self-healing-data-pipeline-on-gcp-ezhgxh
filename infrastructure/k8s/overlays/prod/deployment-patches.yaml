@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        resources:
+          requests:
+            cpu: "1500m"
+            memory: "3Gi"
+          limits:
+            cpu: "3000m"
+            memory: "6Gi"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: ENABLE_PROFILING
+          value: "false"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/var/secrets/google/key.json"
+        - name: ENABLE_SELF_HEALING
+          value: "true"
+        - name: MONITORING_INTERVAL
+          value: "30"
+        - name: MAX_CONCURRENT_JOBS
+          value: "20"
+        - name: ENABLE_HIGH_AVAILABILITY
+          value: "true"
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        - name: config-volume
+          mountPath: /etc/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: prod-credentials
+      - name: config-volume
+        configMap:
+          name: pipeline-config
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - self-healing-pipeline
+              - key: component
+                operator: In
+                values:
+                - backend
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-nodepool
+                operator: In
+                values:
+                - pipeline-prod-pool
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "pipeline"
+        effect: "NoSchedule"
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: web
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: API_URL
+          value: "https://api.self-healing-pipeline.example.com"
+        - name: ENABLE_MOCK_DATA
+          value: "false"
+        - name: ENABLE_DEBUG_TOOLS
+          value: "false"
+        - name: CONTENT_SECURITY_POLICY
+          value: "default-src 'self'; connect-src 'self' https://api.self-healing-pipeline.example.com"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - self-healing-pipeline
+              - key: component
+                operator: In
+                values:
+                - web
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-nodepool
+                operator: In
+                values:
+                - pipeline-prod-pool
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "pipeline"
+        effect: "NoSchedule"
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
