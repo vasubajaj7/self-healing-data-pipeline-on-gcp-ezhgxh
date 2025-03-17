@@ -1,0 +1,80 @@
+[
+  {
+    "name": "default_pool",
+    "description": "Default pool for general-purpose tasks",
+    "slots": 32,
+    "include_deferred": false
+  },
+  {
+    "name": "ingestion_pool",
+    "description": "Pool for data ingestion tasks from various sources",
+    "slots": 20,
+    "include_deferred": false
+  },
+  {
+    "name": "gcs_ingestion_pool",
+    "description": "Dedicated pool for GCS data ingestion operations",
+    "slots": 10,
+    "include_deferred": false
+  },
+  {
+    "name": "cloudsql_ingestion_pool",
+    "description": "Dedicated pool for Cloud SQL data extraction operations",
+    "slots": 8,
+    "include_deferred": false
+  },
+  {
+    "name": "api_ingestion_pool",
+    "description": "Dedicated pool for API data ingestion operations with rate limiting",
+    "slots": 5,
+    "include_deferred": false
+  },
+  {
+    "name": "quality_validation_pool",
+    "description": "Pool for data quality validation tasks",
+    "slots": 15,
+    "include_deferred": false
+  },
+  {
+    "name": "transformation_pool",
+    "description": "Pool for data transformation tasks",
+    "slots": 12,
+    "include_deferred": false
+  },
+  {
+    "name": "bigquery_load_pool",
+    "description": "Pool for BigQuery loading operations",
+    "slots": 10,
+    "include_deferred": false
+  },
+  {
+    "name": "self_healing_pool",
+    "description": "Pool for self-healing operations with AI-driven corrections",
+    "slots": 8,
+    "include_deferred": false
+  },
+  {
+    "name": "monitoring_pool",
+    "description": "Pool for monitoring and alerting tasks",
+    "slots": 5,
+    "include_deferred": false
+  },
+  {
+    "name": "optimization_pool",
+    "description": "Pool for performance optimization tasks",
+    "slots": 4,
+    "include_deferred": false
+  },
+  {
+    "name": "high_priority_pool",
+    "description": "Pool for critical tasks that need immediate execution",
+    "slots": 5,
+    "include_deferred": false
+  },
+  {
+    "name": "low_priority_pool",
+    "description": "Pool for non-critical tasks that can be delayed if needed",
+    "slots": 10,
+    "include_deferred": true
+  }
+]
