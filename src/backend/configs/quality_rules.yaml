@@ -1,0 +1,410 @@
+# Data Quality Validation Rules Configuration
+# Version: 1.0.0
+# Last Updated: 2023-06-15
+# Description: Data quality validation rules for the self-healing data pipeline
+# Owner: data_quality_team
+
+# Rules define individual data quality checks that will be performed
+rules:
+  # Schema validation rules
+  - rule_id: rule-schema-001
+    name: Customer Table Schema Validation
+    description: Validates the schema of the customer table against expected structure
+    rule_type: SCHEMA
+    dimension: VALIDITY
+    enabled: true
+    target_dataset: customer_data
+    target_table: customers
+    parameters:
+      subtype: schema_consistency
+      expected_schema:
+        customer_id: STRING
+        customer_name: STRING
+        email: STRING
+        phone_number: STRING
+        address: STRING
+        city: STRING
+        state: STRING
+        zip_code: STRING
+        registration_date: DATE
+        last_update: TIMESTAMP
+    metadata:
+      severity: CRITICAL
+      owner: data_quality_team
+      tags:
+        - schema
+        - customer
+        - critical
+
+  - rule_id: rule-schema-002
+    name: Sales Table Schema Validation
+    description: Validates the schema of the sales table against expected structure
+    rule_type: SCHEMA
+    dimension: VALIDITY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: schema_consistency
+      expected_schema:
+        sale_id: STRING
+        customer_id: STRING
+        product_id: STRING
+        sale_date: DATE
+        quantity: INTEGER
+        unit_price: FLOAT
+        total_amount: FLOAT
+        discount_percent: FLOAT
+        payment_method: STRING
+        transaction_id: STRING
+    metadata:
+      severity: CRITICAL
+      owner: data_quality_team
+      tags:
+        - schema
+        - sales
+        - critical
+
+  - rule_id: rule-schema-003
+    name: Product Table Primary Key Validation
+    description: Validates that product_id is a unique primary key in the products table
+    rule_type: SCHEMA
+    dimension: UNIQUENESS
+    enabled: true
+    target_dataset: product_catalog
+    target_table: products
+    parameters:
+      subtype: primary_key
+      key_columns:
+        - product_id
+    metadata:
+      severity: CRITICAL
+      owner: data_quality_team
+      tags:
+        - schema
+        - product
+        - primary_key
+
+  # Content validation rules
+  - rule_id: rule-content-001
+    name: Customer Email Not Null Validation
+    description: Validates that customer email addresses are not null
+    rule_type: CONTENT
+    dimension: COMPLETENESS
+    enabled: true
+    target_dataset: customer_data
+    target_table: customers
+    parameters:
+      subtype: not_null
+      columns:
+        - email
+    metadata:
+      severity: HIGH
+      owner: data_quality_team
+      tags:
+        - content
+        - customer
+        - not_null
+
+  - rule_id: rule-content-002
+    name: Sales Amount Range Validation
+    description: Validates that sales total_amount is within expected range
+    rule_type: CONTENT
+    dimension: ACCURACY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: value_range
+      column: total_amount
+      min_value: 0.01
+      max_value: 10000.0
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - content
+        - sales
+        - range
+
+  - rule_id: rule-content-003
+    name: Email Format Validation
+    description: Validates that customer email addresses follow correct format
+    rule_type: CONTENT
+    dimension: VALIDITY
+    enabled: true
+    target_dataset: customer_data
+    target_table: customers
+    parameters:
+      subtype: pattern
+      column: email
+      pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - content
+        - customer
+        - pattern
+
+  - rule_id: rule-content-004
+    name: Payment Method Validation
+    description: Validates that payment methods are from allowed values
+    rule_type: CONTENT
+    dimension: VALIDITY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: categorical
+      column: payment_method
+      allowed_values:
+        - CREDIT
+        - DEBIT
+        - CASH
+        - TRANSFER
+        - CRYPTO
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - content
+        - sales
+        - categorical
+
+  - rule_id: rule-content-005
+    name: Inventory Quantity Not Null
+    description: Validates that inventory quantities are not null
+    rule_type: CONTENT
+    dimension: COMPLETENESS
+    enabled: true
+    target_dataset: inventory
+    target_table: stock
+    parameters:
+      subtype: not_null
+      columns:
+        - quantity
+    metadata:
+      severity: HIGH
+      owner: data_quality_team
+      tags:
+        - content
+        - inventory
+        - not_null
+
+  - rule_id: rule-content-006
+    name: Inventory Quantity Range
+    description: Validates that inventory quantities are within expected range
+    rule_type: CONTENT
+    dimension: ACCURACY
+    enabled: true
+    target_dataset: inventory
+    target_table: stock
+    parameters:
+      subtype: value_range
+      column: quantity
+      min_value: 0
+      max_value: 10000
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - content
+        - inventory
+        - range
+
+  # Relationship validation rules
+  - rule_id: rule-relationship-001
+    name: Sales Customer Foreign Key Validation
+    description: Validates that customer_id in sales table exists in customers table
+    rule_type: RELATIONSHIP
+    dimension: CONSISTENCY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: referential_integrity
+      column: customer_id
+      ref_dataset_id: customer_data
+      ref_table_id: customers
+      ref_column: customer_id
+    metadata:
+      severity: HIGH
+      owner: data_quality_team
+      tags:
+        - relationship
+        - sales
+        - foreign_key
+
+  - rule_id: rule-relationship-002
+    name: Sales Product Foreign Key Validation
+    description: Validates that product_id in sales table exists in products table
+    rule_type: RELATIONSHIP
+    dimension: CONSISTENCY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: referential_integrity
+      column: product_id
+      ref_dataset_id: product_catalog
+      ref_table_id: products
+      ref_column: product_id
+    metadata:
+      severity: HIGH
+      owner: data_quality_team
+      tags:
+        - relationship
+        - sales
+        - foreign_key
+
+  - rule_id: rule-relationship-003
+    name: Customer Transaction Cardinality
+    description: Validates one-to-many relationship between customers and transactions
+    rule_type: RELATIONSHIP
+    dimension: CONSISTENCY
+    enabled: true
+    target_dataset: customer_data
+    target_table: customers
+    parameters:
+      subtype: cardinality
+      column: customer_id
+      ref_dataset_id: sales_metrics
+      ref_table_id: sales
+      ref_column: customer_id
+      relationship_type: one-to-many
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - relationship
+        - cardinality
+
+  # Statistical validation rules
+  - rule_id: rule-statistical-001
+    name: Sales Amount Outlier Detection
+    description: Detects outliers in sales total_amount using z-score method
+    rule_type: STATISTICAL
+    dimension: ACCURACY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: outliers
+      column: total_amount
+      method: zscore
+      threshold: 3.0
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - statistical
+        - sales
+        - outliers
+
+  - rule_id: rule-statistical-002
+    name: Discount Distribution Validation
+    description: Validates that discount_percent follows expected distribution
+    rule_type: STATISTICAL
+    dimension: ACCURACY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: distribution
+      column: discount_percent
+      distribution: normal
+      parameters:
+        mean: 0.1
+        std: 0.05
+        p_value: 0.05
+    metadata:
+      severity: LOW
+      owner: data_quality_team
+      tags:
+        - statistical
+        - sales
+        - distribution
+
+  - rule_id: rule-statistical-003
+    name: Quantity-Amount Correlation
+    description: Validates correlation between quantity and total_amount
+    rule_type: STATISTICAL
+    dimension: CONSISTENCY
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: sales
+    parameters:
+      subtype: correlation
+      column1: quantity
+      column2: total_amount
+      min_correlation: 0.7
+      max_correlation: 1.0
+    metadata:
+      severity: LOW
+      owner: data_quality_team
+      tags:
+        - statistical
+        - sales
+        - correlation
+
+  - rule_id: rule-statistical-004
+    name: Daily Sales Trend Validation
+    description: Validates that daily sales follow expected trend pattern
+    rule_type: STATISTICAL
+    dimension: TIMELINESS
+    enabled: true
+    target_dataset: sales_metrics
+    target_table: daily_sales
+    parameters:
+      subtype: trend
+      time_column: date
+      value_column: total_sales
+      trend_type: increasing
+      parameters:
+        min_slope: 0.01
+        lookback_period: 30
+    metadata:
+      severity: MEDIUM
+      owner: data_quality_team
+      tags:
+        - statistical
+        - sales
+        - trend
+
+# Rule groups organize rules by dataset for easier management
+rule_groups:
+  customer_data:
+    - rule-schema-001
+    - rule-content-001
+    - rule-content-003
+    - rule-relationship-003
+  sales_metrics:
+    - rule-schema-002
+    - rule-content-002
+    - rule-content-004
+    - rule-relationship-001
+    - rule-relationship-002
+    - rule-statistical-001
+    - rule-statistical-002
+    - rule-statistical-003
+    - rule-statistical-004
+  product_catalog:
+    - rule-schema-003
+  inventory:
+    - rule-content-005
+    - rule-content-006
+
+# Default thresholds for different severity levels
+default_thresholds:
+  CRITICAL: 1.0
+  HIGH: 0.95
+  MEDIUM: 0.9
+  LOW: 0.8
+
+# Metadata about this configuration file
+metadata:
+  version: 1.0.0
+  last_updated: 2023-06-15T00:00:00Z
+  description: Data quality validation rules for the self-healing data pipeline
+  owner: data_quality_team
