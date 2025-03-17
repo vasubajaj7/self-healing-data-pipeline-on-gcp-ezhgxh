@@ -1,0 +1,498 @@
+# Monitoring and alerting configuration for the self-healing data pipeline
+version: '1.0'
+description: 'Monitoring and alerting configuration for the self-healing data pipeline'
+
+# General configuration settings
+general:
+  environment: ${ENVIRONMENT:production}
+  project_id: ${GCP_PROJECT_ID}
+  region: ${GCP_REGION:us-central1}
+  log_level: ${LOG_LEVEL:INFO}
+  metrics_retention_days: 30
+  enable_debug_metrics: false
+
+# Metrics collection configuration
+metrics_collection:
+  collection_interval_seconds: 60
+  batch_size: 100
+  custom_metrics_prefix: 'pipeline'
+  
+  # Standard metrics configuration
+  standard_metrics:
+    enabled: true
+    include_system_metrics: true
+    include_gcp_service_metrics: true
+  
+  # Types of metrics to collect
+  metric_types:
+    gauge:
+      description: 'Point-in-time value metrics'
+      examples: ['cpu_usage', 'memory_usage', 'disk_usage']
+    counter:
+      description: 'Cumulative metrics that only increase'
+      examples: ['request_count', 'error_count', 'bytes_processed']
+    histogram:
+      description: 'Distribution of values'
+      examples: ['request_latency', 'processing_time', 'batch_size']
+    summary:
+      description: 'Similar to histogram but with calculated quantiles'
+      examples: ['request_latency_summary', 'processing_time_summary']
+  
+  # Categories of metrics to collect
+  metric_categories:
+    pipeline_health:
+      description: 'Overall pipeline execution health metrics'
+      metrics: ['pipeline_execution_count', 'pipeline_success_rate', 'pipeline_failure_rate', 'pipeline_execution_time', 'task_failure_count']
+      priority: 'high'
+    data_quality:
+      description: 'Data quality and validation metrics'
+      metrics: ['data_quality_score', 'validation_failure_count', 'schema_validation_success_rate', 'null_value_rate', 'anomaly_detection_rate']
+      priority: 'high'
+    self_healing:
+      description: 'Self-healing effectiveness metrics'
+      metrics: ['auto_fix_attempt_count', 'auto_fix_success_rate', 'manual_intervention_count', 'healing_response_time', 'prediction_accuracy']
+      priority: 'high'
+    resource_utilization:
+      description: 'Resource usage and efficiency metrics'
+      metrics: ['bigquery_slots_usage', 'composer_worker_count', 'memory_utilization', 'cpu_utilization', 'storage_utilization']
+      priority: 'medium'
+    performance:
+      description: 'Performance and latency metrics'
+      metrics: ['data_processing_rate', 'query_execution_time', 'data_transfer_rate', 'api_response_time', 'end_to_end_latency']
+      priority: 'medium'
+    cost:
+      description: 'Cost and resource efficiency metrics'
+      metrics: ['bigquery_bytes_processed', 'bigquery_slot_hours', 'storage_cost', 'api_call_count', 'compute_hours']
+      priority: 'low'
+  
+  # Metric storage configuration
+  storage:
+    bigquery:
+      enabled: true
+      dataset: 'monitoring'
+      table: 'pipeline_metrics'
+      partition_field: 'timestamp'
+      partition_type: 'DAY'
+      clustering_fields: ['metric_name', 'component']
+      expiration_days: 90
+    cloud_monitoring:
+      enabled: true
+      custom_metrics_prefix: 'custom.googleapis.com/pipeline'
+      metric_descriptors_auto_creation: true
+
+# Anomaly detection configuration
+anomaly_detection:
+  enabled: true
+  detection_interval_minutes: 5
+  baseline_update_interval_hours: 24
+  min_data_points_for_detection: 10
+  
+  # Anomaly detection methods
+  detectors:
+    # Statistical-based methods
+    statistical:
+      enabled: true
+      methods:
+        z_score:
+          enabled: true
+          default_threshold: 3.0
+          lookback_window_hours: 24
+          min_data_points: 10
+        iqr:
+          enabled: true
+          default_multiplier: 1.5
+          lookback_window_hours: 24
+          min_data_points: 10
+        moving_average:
+          enabled: true
+          default_window_size: 12
+          default_deviation_threshold: 2.0
+        seasonal:
+          enabled: true
+          default_seasonal_periods:
+            hourly: 24
+            daily: 7
+            weekly: 4
+          decomposition_method: 'additive'
+      metric_specific_settings:
+        pipeline_execution_time:
+          method: 'z_score'
+          threshold: 2.5
+          lookback_window_hours: 168
+        data_quality_score:
+          method: 'iqr'
+          multiplier: 2.0
+          lookback_window_hours: 168
+    
+    # Machine learning-based methods
+    machine_learning:
+      enabled: true
+      model_update_interval_days: 7
+      min_training_data_points: 100
+      methods:
+        isolation_forest:
+          enabled: true
+          contamination: 0.05
+          n_estimators: 100
+          max_features: 1.0
+        one_class_svm:
+          enabled: false
+          nu: 0.1
+          kernel: 'rbf'
+          gamma: 'scale'
+        autoencoder:
+          enabled: true
+          hidden_layers: [64, 32, 16, 32, 64]
+          activation: 'relu'
+          reconstruction_error_threshold: 0.3
+          epochs: 50
+          batch_size: 32
+      feature_extraction:
+        statistical_features: true
+        temporal_features: true
+        trend_features: true
+        frequency_features: false
+      model_storage:
+        gcs_bucket: ${GCS_MODEL_BUCKET}
+        model_path: 'models/anomaly_detection'
+        version_retention_count: 5
+      metric_specific_settings:
+        pipeline_execution_time:
+          method: 'isolation_forest'
+          contamination: 0.03
+          feature_importance_analysis: true
+        data_volume:
+          method: 'autoencoder'
+          reconstruction_error_threshold: 0.4
+  
+  # Types of anomalies to detect
+  anomaly_types:
+    point:
+      description: 'Single data point anomalies'
+      default_severity: 'MEDIUM'
+    contextual:
+      description: 'Anomalies normal globally but unusual in context'
+      default_severity: 'MEDIUM'
+    collective:
+      description: 'Sequence of unusual values'
+      default_severity: 'HIGH'
+    trend:
+      description: 'Unusual trends in time series'
+      default_severity: 'HIGH'
+  
+  # Sensitivity levels for anomaly detection
+  sensitivity_levels:
+    low: 0.7
+    medium: 0.8
+    high: 0.9
+  default_sensitivity: 'medium'
+
+# Alerting configuration
+alerting:
+  enabled: true
+  alert_evaluation_interval_seconds: 60
+  alert_deduplication_window_minutes: 15
+  alert_correlation_enabled: true
+  alert_grouping_window_minutes: 10
+  max_alerts_per_group: 10
+  default_severity: 'MEDIUM'
+  
+  # Severity definitions
+  severity_definitions:
+    CRITICAL:
+      description: 'Immediate action required - severe business impact'
+      color: '#FF0000'
+      icon: '🚨'
+      auto_escalation_minutes: 15
+    HIGH:
+      description: 'Urgent action required - significant business impact'
+      color: '#FFA500'
+      icon: '⚠️'
+      auto_escalation_minutes: 30
+    MEDIUM:
+      description: 'Action required - moderate business impact'
+      color: '#FFFF00'
+      icon: '⚠'
+      auto_escalation_minutes: 60
+    LOW:
+      description: 'Action recommended - minor business impact'
+      color: '#00FF00'
+      icon: 'ℹ️'
+      auto_escalation_minutes: 240
+  
+  # Rule engine configuration
+  rule_engine:
+    rules_config_path: 'configs/alert_rules.yaml'
+    rule_evaluation_batch_size: 100
+    rule_cache_ttl_seconds: 300
+    default_lookback_period_hours: 24
+  
+  # Alert storage configuration
+  alert_storage:
+    bigquery:
+      enabled: true
+      dataset: 'monitoring'
+      table: 'alerts'
+      partition_field: 'created_at'
+      partition_type: 'DAY'
+      clustering_fields: ['severity', 'category', 'status']
+      expiration_days: 90
+    firestore:
+      enabled: true
+      collection: 'alerts'
+      ttl_days: 30
+
+# Notification configuration
+notification:
+  # Notification channels
+  channels:
+    # Microsoft Teams notification
+    teams:
+      enabled: true
+      webhooks:
+        data_engineering:
+          url: ${TEAMS_WEBHOOK_DATA_ENGINEERING}
+          description: 'Data Engineering team channel'
+        operations:
+          url: ${TEAMS_WEBHOOK_OPERATIONS}
+          description: 'Operations team channel'
+        data_quality:
+          url: ${TEAMS_WEBHOOK_DATA_QUALITY}
+          description: 'Data Quality team channel'
+      message_templates:
+        default:
+          title: '{{alert.severity}}: {{alert.name}}'
+          subtitle: '{{alert.description}}'
+          include_details: true
+          include_metrics: true
+          include_actions: true
+        pipeline_failure:
+          title: 'Pipeline Failure: {{alert.context.pipeline_name}}'
+          subtitle: 'Execution {{alert.context.execution_id}} failed'
+          include_details: true
+          include_metrics: true
+          include_actions: true
+      delivery_retry:
+        max_retries: 3
+        initial_backoff_seconds: 5
+        max_backoff_seconds: 60
+    
+    # Email notification
+    email:
+      enabled: true
+      sender: ${EMAIL_SENDER:pipeline-alerts@example.com}
+      smtp_server: ${SMTP_SERVER}
+      smtp_port: ${SMTP_PORT:587}
+      smtp_username: ${SMTP_USERNAME}
+      smtp_password: ${SMTP_PASSWORD}
+      use_tls: true
+      recipients:
+        critical: ['oncall@example.com', 'data-engineering-alerts@example.com']
+        data_quality: ['data-quality-team@example.com']
+        infrastructure: ['infrastructure-team@example.com']
+      message_templates:
+        default:
+          subject: '{{alert.severity}}: {{alert.name}}'
+          include_details: true
+          include_metrics: true
+          include_actions: true
+      delivery_retry:
+        max_retries: 3
+        initial_backoff_seconds: 10
+        max_backoff_seconds: 300
+  
+  # Alert routing rules
+  routing:
+    default_channels: ['teams.data_engineering']
+    severity_routing:
+      CRITICAL: ['teams.operations', 'email.critical']
+      HIGH: ['teams.data_engineering', 'teams.operations']
+      MEDIUM: ['teams.data_engineering']
+      LOW: ['teams.data_engineering']
+    category_routing:
+      pipeline_health: ['teams.operations', 'teams.data_engineering']
+      data_quality: ['teams.data_engineering', 'teams.data_quality', 'email.data_quality']
+      resource_utilization: ['teams.operations', 'email.infrastructure']
+  
+  # Notification throttling to prevent alert storms
+  notification_throttling:
+    enabled: true
+    max_notifications_per_minute: 10
+    max_notifications_per_channel_minute: 5
+    digest_interval_minutes:
+      LOW: 60
+      MEDIUM: 30
+      HIGH: 5
+      CRITICAL: 0
+  
+  # Notification history storage
+  notification_history:
+    retention_days: 30
+    storage:
+      bigquery:
+        enabled: true
+        dataset: 'monitoring'
+        table: 'notifications'
+        partition_field: 'timestamp'
+        partition_type: 'DAY'
+
+# Dashboard configuration
+dashboards:
+  cloud_monitoring:
+    create_default_dashboards: true
+    dashboards:
+      pipeline_overview:
+        display_name: 'Pipeline Health Overview'
+        refresh_interval_minutes: 5
+        widgets:
+          - title: 'Pipeline Success Rate'
+            metric: 'pipeline_success_rate'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'Data Quality Score'
+            metric: 'data_quality_score'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'Self-Healing Success Rate'
+            metric: 'auto_fix_success_rate'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'Active Alerts'
+            metric: 'active_alerts_count'
+            chart_type: 'stacked-bar'
+            group_by: 'severity'
+            time_window_hours: 24
+      resource_utilization:
+        display_name: 'Resource Utilization'
+        refresh_interval_minutes: 5
+        widgets:
+          - title: 'BigQuery Slot Utilization'
+            metric: 'bigquery_slots_usage'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'Composer Worker Utilization'
+            metric: 'composer_worker_count'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'Memory Utilization'
+            metric: 'memory_utilization'
+            chart_type: 'line'
+            time_window_hours: 24
+          - title: 'CPU Utilization'
+            metric: 'cpu_utilization'
+            chart_type: 'line'
+            time_window_hours: 24
+
+# Health check configuration
+health_checks:
+  enabled: true
+  check_interval_seconds: 60
+  components:
+    ingestion:
+      enabled: true
+      endpoints:
+        - name: 'GCS Connector'
+          type: 'internal'
+          check_method: 'function_call'
+          function: 'check_gcs_connector_health'
+        - name: 'Cloud SQL Connector'
+          type: 'internal'
+          check_method: 'function_call'
+          function: 'check_cloudsql_connector_health'
+        - name: 'External API Connector'
+          type: 'internal'
+          check_method: 'function_call'
+          function: 'check_api_connector_health'
+    processing:
+      enabled: true
+      endpoints:
+        - name: 'BigQuery'
+          type: 'service'
+          check_method: 'query'
+          query: 'SELECT 1'
+        - name: 'Cloud Composer'
+          type: 'service'
+          check_method: 'api_call'
+          endpoint: 'airflow/api/v1/health'
+    self_healing:
+      enabled: true
+      endpoints:
+        - name: 'AI Model Service'
+          type: 'internal'
+          check_method: 'function_call'
+          function: 'check_model_service_health'
+  health_status_storage:
+    bigquery:
+      enabled: true
+      dataset: 'monitoring'
+      table: 'health_checks'
+      partition_field: 'timestamp'
+      partition_type: 'DAY'
+
+# Logging configuration
+logging:
+  enabled: true
+  log_level: ${LOG_LEVEL:INFO}
+  structured_logging: true
+  include_correlation_id: true
+  include_component: true
+  include_execution_id: true
+  sensitive_fields: ['password', 'token', 'api_key', 'secret']
+  log_storage:
+    cloud_logging:
+      enabled: true
+      log_name: 'pipeline-logs'
+    bigquery:
+      enabled: true
+      dataset: 'monitoring'
+      table: 'logs'
+      partition_field: 'timestamp'
+      partition_type: 'DAY'
+      expiration_days: 30
+
+# Distributed tracing configuration
+tracing:
+  enabled: true
+  sampling_rate: 0.1
+  always_trace_errors: true
+  trace_propagation: true
+  trace_storage:
+    cloud_trace:
+      enabled: true
+
+# SLO monitoring configuration
+slo_monitoring:
+  enabled: true
+  slos:
+    pipeline_availability:
+      description: 'Pipeline execution success rate'
+      target: 0.999
+      window_days: 30
+      metric: 'pipeline_success_rate'
+      threshold: 0.999
+    data_freshness:
+      description: 'Data available within SLA timeframe'
+      target: 0.95
+      window_days: 30
+      metric: 'data_freshness_compliance'
+      threshold: 0.95
+    query_performance:
+      description: 'Queries complete within SLA'
+      target: 0.99
+      window_days: 30
+      metric: 'query_sla_compliance'
+      threshold: 0.99
+    data_quality:
+      description: 'Data quality validation pass rate'
+      target: 0.9995
+      window_days: 30
+      metric: 'quality_validation_pass_rate'
+      threshold: 0.9995
+  error_budget_alerting:
+    enabled: true
+    burn_rate_thresholds:
+      critical: 14.4
+      warning: 3.0
+    consumption_thresholds:
+      critical: 0.9
+      warning: 0.7
