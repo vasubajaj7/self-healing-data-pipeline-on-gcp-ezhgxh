@@ -1,0 +1,410 @@
+{
+  "users": {
+    "admin": {
+      "id": "user-admin-001",
+      "email": "admin@example.com",
+      "password": "Admin123!",
+      "firstName": "Admin",
+      "lastName": "User",
+      "role": "ADMIN",
+      "isActive": true,
+      "mfaEnabled": false,
+      "lastLogin": "2023-06-14T15:30:00.000Z",
+      "permissions": [
+        "MANAGE_USERS", 
+        "MANAGE_ROLES", 
+        "MANAGE_PIPELINES", 
+        "MANAGE_QUALITY_RULES", 
+        "MANAGE_HEALING_SETTINGS", 
+        "VIEW_ALL_DATA"
+      ]
+    },
+    "engineer": {
+      "id": "user-engineer-001",
+      "email": "engineer@example.com",
+      "password": "Engineer123!",
+      "firstName": "Data",
+      "lastName": "Engineer",
+      "role": "DATA_ENGINEER",
+      "isActive": true,
+      "mfaEnabled": false,
+      "lastLogin": "2023-06-15T09:45:00.000Z",
+      "permissions": [
+        "MANAGE_PIPELINES", 
+        "MANAGE_QUALITY_RULES", 
+        "MANAGE_HEALING_SETTINGS", 
+        "VIEW_PIPELINE_DATA"
+      ]
+    },
+    "analyst": {
+      "id": "user-analyst-001",
+      "email": "analyst@example.com",
+      "password": "Analyst123!",
+      "firstName": "Data",
+      "lastName": "Analyst",
+      "role": "DATA_ANALYST",
+      "isActive": true,
+      "mfaEnabled": false,
+      "lastLogin": "2023-06-15T10:15:00.000Z",
+      "permissions": [
+        "VIEW_PIPELINE_DATA", 
+        "VIEW_QUALITY_DATA", 
+        "VIEW_HEALING_DATA"
+      ]
+    },
+    "operator": {
+      "id": "user-operator-001",
+      "email": "operator@example.com",
+      "password": "Operator123!",
+      "firstName": "Pipeline",
+      "lastName": "Operator",
+      "role": "PIPELINE_OPERATOR",
+      "isActive": true,
+      "mfaEnabled": false,
+      "lastLogin": "2023-06-15T08:30:00.000Z",
+      "permissions": [
+        "MANAGE_PIPELINE_EXECUTIONS", 
+        "VIEW_PIPELINE_DATA", 
+        "VIEW_QUALITY_DATA", 
+        "VIEW_HEALING_DATA", 
+        "APPROVE_HEALING_ACTIONS"
+      ]
+    },
+    "inactive": {
+      "id": "user-inactive-001",
+      "email": "inactive@example.com",
+      "password": "Inactive123!",
+      "firstName": "Inactive",
+      "lastName": "User",
+      "role": "DATA_ANALYST",
+      "isActive": false,
+      "mfaEnabled": false,
+      "lastLogin": "2023-05-01T14:20:00.000Z",
+      "permissions": []
+    },
+    "mfaEnabled": {
+      "id": "user-mfa-001",
+      "email": "mfa@example.com",
+      "password": "MfaUser123!",
+      "firstName": "MFA",
+      "lastName": "User",
+      "role": "DATA_ENGINEER",
+      "isActive": true,
+      "mfaEnabled": true,
+      "mfaSecret": "JBSWY3DPEHPK3PXP",
+      "lastLogin": "2023-06-14T16:45:00.000Z",
+      "permissions": [
+        "MANAGE_PIPELINES", 
+        "MANAGE_QUALITY_RULES", 
+        "VIEW_PIPELINE_DATA"
+      ]
+    }
+  },
+  "loginResponses": {
+    "success": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE2ODY4NDEyMDAsImV4cCI6MTY4NjkyNzYwMH0.8dYM9DtZcT6MlZ-hJXQeiH_MkVmGfQDh6kKVevOLx5A",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNjg2ODQxMjAwLCJleHAiOjE2ODc0NDYwMDB9.K2cQT9_Y2RVKKXJFMxIQ9t2Ml0Qpm8XJmypPJA-L3YM",
+      "user": {
+        "id": "user-admin-001",
+        "email": "admin@example.com",
+        "firstName": "Admin",
+        "lastName": "User",
+        "role": "ADMIN",
+        "permissions": [
+          "MANAGE_USERS", 
+          "MANAGE_ROLES", 
+          "MANAGE_PIPELINES", 
+          "MANAGE_QUALITY_RULES", 
+          "MANAGE_HEALING_SETTINGS", 
+          "VIEW_ALL_DATA"
+        ]
+      }
+    },
+    "invalidCredentials": {
+      "error": "Authentication failed",
+      "message": "Invalid email or password",
+      "status": 401
+    },
+    "inactiveAccount": {
+      "error": "Account inactive",
+      "message": "Your account is inactive. Please contact an administrator.",
+      "status": 403
+    },
+    "requiresMfa": {
+      "requiresMfa": true,
+      "tempToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJ0eXBlIjoibWZhX3BlbmRpbmciLCJpYXQiOjE2ODY4NDEyMDAsImV4cCI6MTY4Njg0MjEwMH0.qZDzM3MQIAOEbkBuS_O-HT3CanK9fFVSNbodLJP_5Zs"
+    },
+    "mfaSuccess": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJlbWFpbCI6Im1mYUBleGFtcGxlLmNvbSIsInJvbGUiOiJEQVRBX0VOR0lORUVSIiwiaWF0IjoxNjg2ODQxMjAwLCJleHAiOjE2ODY5Mjc2MDB9.Ij5_0_uFCjvFrLjvIeuYp8y6iYG8QAj5TeIUxVvLKj0",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTY4Njg0MTIwMCwiZXhwIjoxNjg3NDQ2MDAwfQ.Ij5_0_uFCjvFrLjvIeuYp8y6iYG8QAj5TeIUxVvLKj0",
+      "user": {
+        "id": "user-mfa-001",
+        "email": "mfa@example.com",
+        "firstName": "MFA",
+        "lastName": "User",
+        "role": "DATA_ENGINEER",
+        "permissions": [
+          "MANAGE_PIPELINES", 
+          "MANAGE_QUALITY_RULES", 
+          "VIEW_PIPELINE_DATA"
+        ]
+      }
+    },
+    "mfaFailed": {
+      "error": "MFA verification failed",
+      "message": "Invalid verification code",
+      "status": 401
+    }
+  },
+  "userProfiles": {
+    "admin": {
+      "id": "user-admin-001",
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "role": "ADMIN",
+      "department": "IT Operations",
+      "jobTitle": "System Administrator",
+      "phoneNumber": "+1-555-123-4567",
+      "createdAt": "2023-01-01T00:00:00.000Z",
+      "updatedAt": "2023-06-01T12:00:00.000Z",
+      "lastLogin": "2023-06-14T15:30:00.000Z",
+      "loginCount": 152,
+      "preferences": {
+        "theme": "light",
+        "notifications": {
+          "email": true,
+          "inApp": true,
+          "teams": true
+        },
+        "defaultDashboard": "system-overview"
+      }
+    },
+    "engineer": {
+      "id": "user-engineer-001",
+      "email": "engineer@example.com",
+      "firstName": "Data",
+      "lastName": "Engineer",
+      "role": "DATA_ENGINEER",
+      "department": "Data Engineering",
+      "jobTitle": "Senior Data Engineer",
+      "phoneNumber": "+1-555-234-5678",
+      "createdAt": "2023-01-15T00:00:00.000Z",
+      "updatedAt": "2023-05-20T09:30:00.000Z",
+      "lastLogin": "2023-06-15T09:45:00.000Z",
+      "loginCount": 98,
+      "preferences": {
+        "theme": "dark",
+        "notifications": {
+          "email": true,
+          "inApp": true,
+          "teams": true
+        },
+        "defaultDashboard": "pipeline-overview"
+      }
+    },
+    "analyst": {
+      "id": "user-analyst-001",
+      "email": "analyst@example.com",
+      "firstName": "Data",
+      "lastName": "Analyst",
+      "role": "DATA_ANALYST",
+      "department": "Business Intelligence",
+      "jobTitle": "Data Analyst",
+      "phoneNumber": "+1-555-345-6789",
+      "createdAt": "2023-02-01T00:00:00.000Z",
+      "updatedAt": "2023-04-15T14:20:00.000Z",
+      "lastLogin": "2023-06-15T10:15:00.000Z",
+      "loginCount": 65,
+      "preferences": {
+        "theme": "light",
+        "notifications": {
+          "email": true,
+          "inApp": true,
+          "teams": false
+        },
+        "defaultDashboard": "data-quality"
+      }
+    },
+    "operator": {
+      "id": "user-operator-001",
+      "email": "operator@example.com",
+      "firstName": "Pipeline",
+      "lastName": "Operator",
+      "role": "PIPELINE_OPERATOR",
+      "department": "Data Operations",
+      "jobTitle": "Pipeline Operator",
+      "phoneNumber": "+1-555-456-7890",
+      "createdAt": "2023-02-15T00:00:00.000Z",
+      "updatedAt": "2023-05-10T11:15:00.000Z",
+      "lastLogin": "2023-06-15T08:30:00.000Z",
+      "loginCount": 87,
+      "preferences": {
+        "theme": "dark",
+        "notifications": {
+          "email": true,
+          "inApp": true,
+          "teams": true
+        },
+        "defaultDashboard": "pipeline-monitoring"
+      }
+    }
+  },
+  "testCases": {
+    "validLogin": {
+      "email": "admin@example.com",
+      "password": "Admin123!",
+      "expectedRedirect": "/dashboard"
+    },
+    "invalidLogin": {
+      "email": "wrong@example.com",
+      "password": "WrongPassword123!",
+      "expectedError": "Invalid email or password"
+    },
+    "inactiveAccount": {
+      "email": "inactive@example.com",
+      "password": "Inactive123!",
+      "expectedError": "Your account is inactive. Please contact an administrator."
+    },
+    "mfaLogin": {
+      "email": "mfa@example.com",
+      "password": "MfaUser123!",
+      "validMfaCode": "123456",
+      "invalidMfaCode": "111111",
+      "expectedRedirect": "/mfa-verification"
+    }
+  },
+  "apiResponses": {
+    "login": {
+      "success": {
+        "status": 200,
+        "body": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE2ODY4NDEyMDAsImV4cCI6MTY4NjkyNzYwMH0.8dYM9DtZcT6MlZ-hJXQeiH_MkVmGfQDh6kKVevOLx5A",
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNjg2ODQxMjAwLCJleHAiOjE2ODc0NDYwMDB9.K2cQT9_Y2RVKKXJFMxIQ9t2Ml0Qpm8XJmypPJA-L3YM",
+          "user": {
+            "id": "user-admin-001",
+            "email": "admin@example.com",
+            "firstName": "Admin",
+            "lastName": "User",
+            "role": "ADMIN"
+          }
+        }
+      },
+      "invalidCredentials": {
+        "status": 401,
+        "body": {
+          "error": "Authentication failed",
+          "message": "Invalid email or password"
+        }
+      },
+      "inactiveAccount": {
+        "status": 403,
+        "body": {
+          "error": "Account inactive",
+          "message": "Your account is inactive. Please contact an administrator."
+        }
+      },
+      "requiresMfa": {
+        "status": 200,
+        "body": {
+          "requiresMfa": true,
+          "tempToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJ0eXBlIjoibWZhX3BlbmRpbmciLCJpYXQiOjE2ODY4NDEyMDAsImV4cCI6MTY4Njg0MjEwMH0.qZDzM3MQIAOEbkBuS_O-HT3CanK9fFVSNbodLJP_5Zs"
+        }
+      }
+    },
+    "mfaVerify": {
+      "success": {
+        "status": 200,
+        "body": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJlbWFpbCI6Im1mYUBleGFtcGxlLmNvbSIsInJvbGUiOiJEQVRBX0VOR0lORUVSIiwiaWF0IjoxNjg2ODQxMjAwLCJleHAiOjE2ODY5Mjc2MDB9.Ij5_0_uFCjvFrLjvIeuYp8y6iYG8QAj5TeIUxVvLKj0",
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLW1mYS0wMDEiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTY4Njg0MTIwMCwiZXhwIjoxNjg3NDQ2MDAwfQ.Ij5_0_uFCjvFrLjvIeuYp8y6iYG8QAj5TeIUxVvLKj0",
+          "user": {
+            "id": "user-mfa-001",
+            "email": "mfa@example.com",
+            "firstName": "MFA",
+            "lastName": "User",
+            "role": "DATA_ENGINEER"
+          }
+        }
+      },
+      "invalidCode": {
+        "status": 401,
+        "body": {
+          "error": "MFA verification failed",
+          "message": "Invalid verification code"
+        }
+      },
+      "expiredToken": {
+        "status": 401,
+        "body": {
+          "error": "Authentication failed",
+          "message": "MFA session expired, please log in again"
+        }
+      }
+    },
+    "refreshToken": {
+      "success": {
+        "status": 200,
+        "body": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE2ODY4NDEyMDAsImV4cCI6MTY4NjkyNzYwMH0.8dYM9DtZcT6MlZ-hJXQeiH_MkVmGfQDh6kKVevOLx5A",
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWFkbWluLTAwMSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNjg2ODQxMjAwLCJleHAiOjE2ODc0NDYwMDB9.K2cQT9_Y2RVKKXJFMxIQ9t2Ml0Qpm8XJmypPJA-L3YM"
+        }
+      },
+      "invalidToken": {
+        "status": 401,
+        "body": {
+          "error": "Authentication failed",
+          "message": "Invalid refresh token"
+        }
+      },
+      "expiredToken": {
+        "status": 401,
+        "body": {
+          "error": "Authentication failed",
+          "message": "Refresh token expired, please log in again"
+        }
+      }
+    },
+    "forgotPassword": {
+      "success": {
+        "status": 200,
+        "body": {
+          "message": "Password reset email sent"
+        }
+      },
+      "userNotFound": {
+        "status": 404,
+        "body": {
+          "error": "User not found",
+          "message": "No user found with the provided email"
+        }
+      }
+    },
+    "resetPassword": {
+      "success": {
+        "status": 200,
+        "body": {
+          "message": "Password reset successful"
+        }
+      },
+      "invalidToken": {
+        "status": 401,
+        "body": {
+          "error": "Invalid token",
+          "message": "Password reset token is invalid or expired"
+        }
+      },
+      "validationError": {
+        "status": 400,
+        "body": {
+          "error": "Validation error",
+          "message": "Password does not meet requirements",
+          "details": [
+            "Password must be at least 8 characters",
+            "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character"
+          ]
+        }
+      }
+    }
+  }
+}
