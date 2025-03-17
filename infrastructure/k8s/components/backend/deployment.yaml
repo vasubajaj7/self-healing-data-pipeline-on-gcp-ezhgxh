@@ -1,0 +1,196 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: backend
+    environment: ${ENV}
+    managed-by: kustomize
+  annotations:
+    description: "Backend services for the self-healing data pipeline"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: self-healing-pipeline
+      component: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 30
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        app: self-healing-pipeline
+        component: backend
+        environment: ${ENV}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: pipeline-backend-sa
+      containers:
+      - name: backend
+        image: gcr.io/${PROJECT_ID}/self-healing-pipeline/backend:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 8081
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: LOG_LEVEL
+        - name: GCP_PROJECT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: GCP_PROJECT_ID
+        - name: GCP_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: GCP_REGION
+        - name: BIGQUERY_DATASET
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: BIGQUERY_DATASET
+        - name: GCS_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: GCS_BUCKET
+        - name: ENABLE_METRICS
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENABLE_METRICS
+        - name: ENABLE_TRACING
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: ENABLE_TRACING
+        - name: MAX_RETRY_ATTEMPTS
+          valueFrom:
+            configMapKeyRef:
+              name: pipeline-config
+              key: MAX_RETRY_ATTEMPTS
+        - name: CLOUDSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: CLOUDSQL_USER
+        - name: CLOUDSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: CLOUDSQL_PASSWORD
+        - name: CLOUDSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: CLOUDSQL_DATABASE
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/var/secrets/google/key.json"
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "2Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+          readOnly: true
+        - name: config-volume
+          mountPath: /etc/config
+          readOnly: true
+        - name: quality-config-volume
+          mountPath: /etc/quality-config
+          readOnly: true
+        - name: healing-config-volume
+          mountPath: /etc/healing-config
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 12
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: gcp-service-account
+      - name: config-volume
+        configMap:
+          name: pipeline-config
+      - name: quality-config-volume
+        configMap:
+          name: quality-config
+      - name: healing-config-volume
+        configMap:
+          name: healing-config
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - self-healing-pipeline
+                - key: component
+                  operator: In
+                  values:
+                  - backend
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 2000
