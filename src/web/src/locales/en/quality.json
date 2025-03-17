@@ -1,0 +1,1491 @@
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  CircularProgress,
+  Container,
+  Divider,
+  FormControl,
+  Grid,
+  IconButton,
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tabs,
+  Tab,
+  TextField,
+  Tooltip,
+  Typography,
+  Badge,
+} from '@mui/material';
+
+// Import icons
+import RefreshIcon from '@mui/icons-material/Refresh';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import InfoIcon from '@mui/icons-material/Info';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import WarningIcon from '@mui/icons-material/Warning';
+import SearchIcon from '@mui/icons-material/Search';
+import GetAppIcon from '@mui/icons-material/GetApp';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+
+// Import date formatting utility
+import { format, formatDistanceToNow } from 'date-fns';
+
+/**
+ * Data Quality Dashboard Component
+ * A comprehensive UI for monitoring and managing data quality across pipelines
+ */
+const DataQualityDashboard = ({ translations }) => {
+  // State
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedDataset, setSelectedDataset] = useState('');
+  const [selectedTable, setSelectedTable] = useState('');
+  const [qualityData, setQualityData] = useState(null);
+  const [issues, setIssues] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [datasets, setDatasets] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [notification, setNotification] = useState(null);
+  const [issueFilters, setIssueFilters] = useState({
+    severity: '',
+    status: '',
+    dimension: '',
+    searchTerm: ''
+  });
+  const [ruleFilters, setRuleFilters] = useState({
+    type: '',
+    dimension: '',
+    severity: '',
+    active: '',
+    searchTerm: ''
+  });
+  const [timeRange, setTimeRange] = useState('last30Days');
+
+  // Use translations provided from props
+  const {
+    dashboard,
+    qualityScore,
+    dimensions,
+    issues: issuesText,
+    rules: rulesText,
+    trends: trendsText,
+    statistics: statsText,
+    validation: validationText,
+    columns: columnsText,
+    actions: actionsText,
+    tooltips: tooltipsText,
+    notifications: notificationsText,
+    emptyStates: emptyStatesText
+  } = translations || {};
+
+  /**
+   * Fetch dashboard data from API
+   */
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // In a real application, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock data for demonstration
+      const mockData = {
+        datasets: ['sales', 'customer', 'inventory'],
+        tables: {
+          sales: ['transactions', 'products', 'customers'],
+          customer: ['profiles', 'addresses', 'preferences'],
+          inventory: ['stock', 'locations', 'suppliers']
+        },
+        qualityScore: 85,
+        trend: 'improving', // 'improving', 'stable', 'declining'
+        dimensions: {
+          completeness: 90,
+          accuracy: 82,
+          consistency: 88,
+          timeliness: 95,
+          validity: 78,
+          uniqueness: 92
+        },
+        issues: [
+          {
+            id: 'ISS-001',
+            dataset: 'sales',
+            table: 'transactions',
+            column: 'amount',
+            description: 'Null values detected',
+            severity: 'high',
+            status: 'open',
+            dimension: 'completeness',
+            detectedAt: '2023-06-15T10:30:00Z',
+            affectedRows: 25,
+            healingStatus: 'healingInProgress'
+          },
+          {
+            id: 'ISS-002',
+            dataset: 'customer',
+            table: 'profiles',
+            column: 'email',
+            description: 'Invalid email format',
+            severity: 'medium',
+            status: 'inProgress',
+            dimension: 'validity',
+            detectedAt: '2023-06-14T09:15:00Z',
+            affectedRows: 12,
+            healingStatus: 'healingSuccessful'
+          },
+          {
+            id: 'ISS-003',
+            dataset: 'inventory',
+            table: 'stock',
+            column: 'quantity',
+            description: 'Negative values detected',
+            severity: 'high',
+            status: 'open',
+            dimension: 'accuracy',
+            detectedAt: '2023-06-15T08:45:00Z',
+            affectedRows: 3,
+            healingStatus: 'healingPending'
+          }
+        ],
+        rules: [
+          {
+            id: 'RULE-001',
+            name: 'Non-null check',
+            description: 'Ensures required fields contain values',
+            dataset: 'sales',
+            table: 'transactions',
+            column: 'amount',
+            type: 'nullCheck',
+            dimension: 'completeness',
+            severity: 'high',
+            active: true,
+            createdAt: '2023-05-01T00:00:00Z',
+            updatedAt: '2023-05-01T00:00:00Z',
+            lastExecuted: '2023-06-15T10:30:00Z',
+            successRate: 99.5
+          },
+          {
+            id: 'RULE-002',
+            name: 'Email format check',
+            description: 'Validates email format',
+            dataset: 'customer',
+            table: 'profiles',
+            column: 'email',
+            type: 'patternMatch',
+            dimension: 'validity',
+            severity: 'medium',
+            active: true,
+            createdAt: '2023-05-02T00:00:00Z',
+            updatedAt: '2023-05-15T00:00:00Z',
+            lastExecuted: '2023-06-14T09:15:00Z',
+            successRate: 98.2
+          },
+          {
+            id: 'RULE-003',
+            name: 'Positive quantity check',
+            description: 'Ensures quantity values are non-negative',
+            dataset: 'inventory',
+            table: 'stock',
+            column: 'quantity',
+            type: 'valueRange',
+            dimension: 'accuracy',
+            severity: 'high',
+            active: true,
+            createdAt: '2023-05-10T00:00:00Z',
+            updatedAt: '2023-05-10T00:00:00Z',
+            lastExecuted: '2023-06-15T08:45:00Z',
+            successRate: 99.9
+          }
+        ],
+        trendData: {
+          dates: ['2023-05-16', '2023-05-23', '2023-05-30', '2023-06-06', '2023-06-13'],
+          scores: [78, 80, 82, 84, 85],
+          dimensions: {
+            completeness: [85, 86, 88, 90, 90],
+            accuracy: [75, 78, 79, 80, 82],
+            consistency: [80, 82, 85, 86, 88],
+            timeliness: [90, 92, 93, 94, 95],
+            validity: [70, 72, 75, 77, 78],
+            uniqueness: [86, 88, 90, 91, 92]
+          }
+        },
+        statistics: {
+          totalDatasets: 3,
+          totalTables: 9,
+          totalRules: 24,
+          activeRules: 22,
+          validationsLast24h: 120,
+          validationsLast7d: 840,
+          validationsLast30d: 3600,
+          successRateLast24h: 98.5,
+          successRateLast7d: 97.8,
+          successRateLast30d: 97.2,
+          openIssues: 5,
+          issuesByDimension: {
+            completeness: 2,
+            accuracy: 1,
+            consistency: 0,
+            timeliness: 0,
+            validity: 2,
+            uniqueness: 0
+          },
+          issuesBySeverity: {
+            high: 2,
+            medium: 2,
+            low: 1
+          },
+          selfHealingSuccessRate: 80
+        }
+      };
+      
+      setDatasets(mockData.datasets);
+      setTables(mockData.tables);
+      setQualityData(mockData);
+      setIssues(mockData.issues);
+      setRules(mockData.rules);
+      setLastRefreshed(new Date());
+      
+      // Show success notification
+      showNotification(notificationsText.dataRefreshed, 'success');
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      
+      // Show error notification
+      showNotification(notificationsText.refreshError, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Display a notification message that auto-dismisses
+   * @param {string} message - The message to display
+   * @param {string} type - The type of notification ('success' or 'error')
+   */
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000);
+  };
+
+  /**
+   * Handle tab change
+   * @param {Event} event - The event object
+   * @param {number} newValue - The new tab index
+   */
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  /**
+   * Handle dataset selection change
+   * @param {Event} event - The event object
+   */
+  const handleDatasetChange = (event) => {
+    const dataset = event.target.value;
+    setSelectedDataset(dataset);
+    setSelectedTable('');
+  };
+
+  /**
+   * Handle table selection change
+   * @param {Event} event - The event object
+   */
+  const handleTableChange = (event) => {
+    setSelectedTable(event.target.value);
+  };
+
+  /**
+   * Handle issue filter changes
+   * @param {string} field - The filter field to update
+   * @param {string} value - The new filter value
+   */
+  const handleIssueFilterChange = (field, value) => {
+    setIssueFilters({
+      ...issueFilters,
+      [field]: value
+    });
+  };
+
+  /**
+   * Handle rule filter changes
+   * @param {string} field - The filter field to update
+   * @param {string} value - The new filter value
+   */
+  const handleRuleFilterChange = (field, value) => {
+    setRuleFilters({
+      ...ruleFilters,
+      [field]: value
+    });
+  };
+
+  /**
+   * Handle time range selection for trends
+   * @param {string} range - The selected time range
+   */
+  const handleTimeRangeChange = (range) => {
+    setTimeRange(range);
+  };
+
+  /**
+   * Filter issues based on selected filters
+   * @returns {Array} - Filtered issues array
+   */
+  const getFilteredIssues = () => {
+    return issues.filter(issue => {
+      // Apply dataset filter if selected
+      if (selectedDataset && issue.dataset !== selectedDataset) {
+        return false;
+      }
+      
+      // Apply table filter if selected
+      if (selectedTable && issue.table !== selectedTable) {
+        return false;
+      }
+      
+      // Apply severity filter if selected
+      if (issueFilters.severity && issue.severity !== issueFilters.severity) {
+        return false;
+      }
+      
+      // Apply status filter if selected
+      if (issueFilters.status && issue.status !== issueFilters.status) {
+        return false;
+      }
+      
+      // Apply dimension filter if selected
+      if (issueFilters.dimension && issue.dimension !== issueFilters.dimension) {
+        return false;
+      }
+      
+      // Apply search term if entered
+      if (issueFilters.searchTerm) {
+        const searchLower = issueFilters.searchTerm.toLowerCase();
+        return (
+          issue.id.toLowerCase().includes(searchLower) ||
+          issue.description.toLowerCase().includes(searchLower) ||
+          issue.column.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return true;
+    });
+  };
+
+  /**
+   * Filter rules based on selected filters
+   * @returns {Array} - Filtered rules array
+   */
+  const getFilteredRules = () => {
+    return rules.filter(rule => {
+      // Apply dataset filter if selected
+      if (selectedDataset && rule.dataset !== selectedDataset) {
+        return false;
+      }
+      
+      // Apply table filter if selected
+      if (selectedTable && rule.table !== selectedTable) {
+        return false;
+      }
+      
+      // Apply type filter if selected
+      if (ruleFilters.type && rule.type !== ruleFilters.type) {
+        return false;
+      }
+      
+      // Apply dimension filter if selected
+      if (ruleFilters.dimension && rule.dimension !== ruleFilters.dimension) {
+        return false;
+      }
+      
+      // Apply severity filter if selected
+      if (ruleFilters.severity && rule.severity !== ruleFilters.severity) {
+        return false;
+      }
+      
+      // Apply active filter if selected
+      if (ruleFilters.active === 'activeOnly' && !rule.active) {
+        return false;
+      }
+      
+      if (ruleFilters.active === 'inactiveOnly' && rule.active) {
+        return false;
+      }
+      
+      // Apply search term if entered
+      if (ruleFilters.searchTerm) {
+        const searchLower = ruleFilters.searchTerm.toLowerCase();
+        return (
+          rule.id.toLowerCase().includes(searchLower) ||
+          rule.name.toLowerCase().includes(searchLower) ||
+          rule.description.toLowerCase().includes(searchLower) ||
+          rule.column.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return true;
+    });
+  };
+
+  /**
+   * Get the color for a quality score
+   * @param {number} score - The quality score (0-100)
+   * @returns {string} - Color code for the score
+   */
+  const getQualityScoreColor = (score) => {
+    if (score >= 90) return '#4caf50'; // Excellent - Green
+    if (score >= 80) return '#8bc34a'; // Good - Light Green
+    if (score >= 70) return '#ffeb3b'; // Fair - Yellow
+    if (score >= 60) return '#ff9800'; // Poor - Orange
+    return '#f44336'; // Critical - Red
+  };
+
+  /**
+   * Get the label for a quality score
+   * @param {number} score - The quality score (0-100)
+   * @returns {string} - Label for the score
+   */
+  const getQualityScoreLabel = (score) => {
+    if (score >= 90) return qualityScore.excellent;
+    if (score >= 80) return qualityScore.good;
+    if (score >= 70) return qualityScore.fair;
+    if (score >= 60) return qualityScore.poor;
+    return qualityScore.critical;
+  };
+
+  /**
+   * Format a date for display
+   * @param {string} dateString - The date string to format
+   * @returns {string} - Formatted date string
+   */
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'MMM d, yyyy h:mm a');
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  /**
+   * Format a date as a relative time
+   * @param {string} dateString - The date string to format
+   * @returns {string} - Relative time string (e.g., "2 hours ago")
+   */
+  const formatRelativeTime = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Update available tables when dataset selection changes
+  useEffect(() => {
+    if (selectedDataset && qualityData && qualityData.tables) {
+      setTables(qualityData.tables[selectedDataset] || []);
+    } else {
+      setTables([]);
+    }
+  }, [selectedDataset, qualityData]);
+
+  /**
+   * Render a severity chip
+   * @param {string} severity - The severity value ('high', 'medium', 'low')
+   * @returns {JSX.Element} - The severity chip component
+   */
+  const SeverityChip = ({ severity }) => {
+    const color = 
+      severity === 'high' ? 'error' : 
+      severity === 'medium' ? 'warning' : 
+      'success';
+    
+    const label = issuesText.severity[severity];
+    
+    return <Chip size="small" color={color} label={label} />;
+  };
+
+  /**
+   * Render a status chip
+   * @param {string} status - The status value ('open', 'inProgress', 'resolved', 'ignored')
+   * @returns {JSX.Element} - The status chip component
+   */
+  const StatusChip = ({ status }) => {
+    let color;
+    let icon;
+    
+    switch (status) {
+      case 'open':
+        color = 'error';
+        icon = <WarningIcon fontSize="small" />;
+        break;
+      case 'inProgress':
+        color = 'warning';
+        icon = <CircularProgress size={12} />;
+        break;
+      case 'resolved':
+        color = 'success';
+        icon = <CheckIcon fontSize="small" />;
+        break;
+      case 'ignored':
+        color = 'default';
+        icon = <CloseIcon fontSize="small" />;
+        break;
+      default:
+        color = 'primary';
+        icon = <InfoIcon fontSize="small" />;
+    }
+    
+    return (
+      <Chip 
+        size="small" 
+        color={color} 
+        icon={icon}
+        label={issuesText.status[status]} 
+      />
+    );
+  };
+
+  /**
+   * Render a healing status chip
+   * @param {string} status - The healing status value
+   * @returns {JSX.Element} - The healing status chip component
+   */
+  const HealingStatusChip = ({ status }) => {
+    let color;
+    let icon;
+    
+    switch (status) {
+      case 'healingInProgress':
+        color = 'warning';
+        icon = <CircularProgress size={12} />;
+        break;
+      case 'healingSuccessful':
+        color = 'success';
+        icon = <CheckIcon fontSize="small" />;
+        break;
+      case 'healingFailed':
+        color = 'error';
+        icon = <CloseIcon fontSize="small" />;
+        break;
+      case 'healingPending':
+        color = 'info';
+        icon = <InfoIcon fontSize="small" />;
+        break;
+      default:
+        color = 'default';
+        icon = <InfoIcon fontSize="small" />;
+    }
+    
+    return (
+      <Chip 
+        size="small" 
+        color={color} 
+        icon={icon}
+        label={issuesText[status]} 
+      />
+    );
+  };
+
+  /**
+   * Linear progress bar with label
+   * @param {Object} props - Component props
+   * @param {number} props.value - The progress value (0-100)
+   * @returns {JSX.Element} - The progress bar component
+   */
+  const LinearProgressWithLabel = (props) => {
+    return (
+      <Box display="flex" alignItems="center">
+        <Box width="100%" mr={1}>
+          <LinearProgress 
+            variant="determinate" 
+            value={props.value} 
+            sx={{ 
+              height: 10, 
+              borderRadius: 5,
+              backgroundColor: '#e0e0e0',
+              '& .MuiLinearProgress-bar': {
+                backgroundColor: getQualityScoreColor(props.value),
+                borderRadius: 5
+              }
+            }}
+          />
+        </Box>
+        <Box minWidth={35}>
+          <Typography variant="body2" color="text.secondary">{`${Math.round(
+            props.value,
+          )}%`}</Typography>
+        </Box>
+      </Box>
+    );
+  };
+  
+  // Add PropTypes for the LinearProgressWithLabel component
+  LinearProgressWithLabel.propTypes = {
+    value: PropTypes.number.isRequired,
+  };
+
+  /**
+   * Render the dashboard header
+   * @returns {JSX.Element} - The header component
+   */
+  const renderHeader = () => (
+    <Box mb={3}>
+      <Grid container spacing={2} alignItems="center" justifyContent="space-between">
+        <Grid item>
+          <Typography variant="h4" component="h1">{dashboard.title}</Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {dashboard.subtitle}
+          </Typography>
+        </Grid>
+        <Grid item>
+          <Box display="flex" alignItems="center">
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 2 }}>
+              {dashboard.lastUpdated.replace('{{time}}', formatDate(lastRefreshed))}
+            </Typography>
+            <Tooltip title={tooltipsText.refreshData || "Refresh data"}>
+              <IconButton onClick={fetchData} disabled={loading} size="small" sx={{ mr: 1 }}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            
+            <FormControl variant="outlined" size="small" sx={{ minWidth: 120, mr: 1 }}>
+              <InputLabel id="dataset-select-label">{dashboard.selectDataset}</InputLabel>
+              <Select
+                labelId="dataset-select-label"
+                id="dataset-select"
+                value={selectedDataset}
+                onChange={handleDatasetChange}
+                label={dashboard.selectDataset}
+              >
+                <MenuItem value="">
+                  <em>All datasets</em>
+                </MenuItem>
+                {datasets.map((dataset) => (
+                  <MenuItem key={dataset} value={dataset}>{dataset}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {selectedDataset && (
+              <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
+                <InputLabel id="table-select-label">{dashboard.selectTable}</InputLabel>
+                <Select
+                  labelId="table-select-label"
+                  id="table-select"
+                  value={selectedTable}
+                  onChange={handleTableChange}
+                  label={dashboard.selectTable}
+                >
+                  <MenuItem value="">
+                    <em>{dashboard.allTables}</em>
+                  </MenuItem>
+                  {tables.map((table) => (
+                    <MenuItem key={table} value={table}>{table}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </Box>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  /**
+   * Render the overview tab content
+   * @returns {JSX.Element} - The overview tab content
+   */
+  const renderOverviewTab = () => (
+    <Box mt={2}>
+      {loading ? (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      ) : qualityData ? (
+        <Grid container spacing={3}>
+          {/* Quality Score Card */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {qualityScore.title}
+                </Typography>
+                <Box display="flex" alignItems="center" justifyContent="center" my={2}>
+                  <Box position="relative" display="inline-flex">
+                    <CircularProgress 
+                      variant="determinate" 
+                      value={qualityData.qualityScore} 
+                      size={120}
+                      thickness={5}
+                      sx={{ color: getQualityScoreColor(qualityData.qualityScore) }}
+                    />
+                    <Box
+                      top={0}
+                      left={0}
+                      bottom={0}
+                      right={0}
+                      position="absolute"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Typography variant="h4" component="div">
+                        {qualityData.qualityScore}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+                <Typography variant="subtitle1" align="center" color="text.secondary">
+                  {getQualityScoreLabel(qualityData.qualityScore)}
+                </Typography>
+                <Box mt={2}>
+                  <Typography variant="body2" color="text.secondary">
+                    {qualityScore.trend}: <span style={{ fontWeight: 'bold', color: qualityData.trend === 'improving' ? '#4caf50' : qualityData.trend === 'declining' ? '#f44336' : '#757575' }}>
+                      {qualityScore[qualityData.trend]}
+                    </span>
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Quality Dimensions Card */}
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {dimensions.title}
+                </Typography>
+                <Grid container spacing={2}>
+                  {qualityData.dimensions && Object.entries(qualityData.dimensions).map(([key, value]) => (
+                    <Grid item xs={6} sm={4} key={key}>
+                      <Tooltip title={dimensions.description[key] || ''}>
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {dimensions[key]}
+                          </Typography>
+                          <Box mt={1}>
+                            <LinearProgressWithLabel value={value} />
+                          </Box>
+                        </Box>
+                      </Tooltip>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Statistics Card */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {statsText.title}
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.totalDatasets}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.totalDatasets}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.totalTables}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.totalTables}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.activeRules}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.activeRules}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.openIssues}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.openIssues}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.validationsLast24h}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.validationsLast24h}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">{statsText.successRateLast24h}</Typography>
+                    <Typography variant="h6">{qualityData.statistics.successRateLast24h}%</Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          {/* Recent Issues Card */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">
+                    {issuesText.title}
+                  </Typography>
+                  <Button 
+                    size="small" 
+                    onClick={() => setActiveTab(1)}
+                  >
+                    {actionsText.viewIssues}
+                  </Button>
+                </Box>
+                {issues.length > 0 ? (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{issuesText.id}</TableCell>
+                          <TableCell>{issuesText.description}</TableCell>
+                          <TableCell>{issuesText.severity}</TableCell>
+                          <TableCell>{issuesText.status}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {issues.slice(0, 3).map((issue) => (
+                          <TableRow key={issue.id}>
+                            <TableCell>{issue.id}</TableCell>
+                            <TableCell>{issue.description}</TableCell>
+                            <TableCell>
+                              <SeverityChip severity={issue.severity} />
+                            </TableCell>
+                            <TableCell>
+                              <StatusChip status={issue.status} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Box py={2} textAlign="center">
+                    <Typography variant="body2" color="text.secondary">
+                      {emptyStatesText.noIssues}
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      ) : (
+        <Box textAlign="center" my={4}>
+          <Typography variant="body1" color="text.secondary">
+            {emptyStatesText.noDatasets}
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+
+  /**
+   * Render the issue filters
+   * @returns {JSX.Element} - The issue filters component
+   */
+  const renderIssueFilters = () => (
+    <Box mb={2} p={2} bgcolor="background.paper" borderRadius={1} boxShadow={1}>
+      <Typography variant="subtitle2" gutterBottom>
+        {issuesText.filters.title}
+      </Typography>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="issue-severity-label">{issuesText.filters.severity}</InputLabel>
+            <Select
+              labelId="issue-severity-label"
+              id="issue-severity"
+              value={issueFilters.severity}
+              onChange={(e) => handleIssueFilterChange('severity', e.target.value)}
+              label={issuesText.filters.severity}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="high">{issuesText.severity.high}</MenuItem>
+              <MenuItem value="medium">{issuesText.severity.medium}</MenuItem>
+              <MenuItem value="low">{issuesText.severity.low}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="issue-status-label">{issuesText.filters.status}</InputLabel>
+            <Select
+              labelId="issue-status-label"
+              id="issue-status"
+              value={issueFilters.status}
+              onChange={(e) => handleIssueFilterChange('status', e.target.value)}
+              label={issuesText.filters.status}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="open">{issuesText.status.open}</MenuItem>
+              <MenuItem value="inProgress">{issuesText.status.inProgress}</MenuItem>
+              <MenuItem value="resolved">{issuesText.status.resolved}</MenuItem>
+              <MenuItem value="ignored">{issuesText.status.ignored}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="issue-dimension-label">{issuesText.filters.dimension}</InputLabel>
+            <Select
+              labelId="issue-dimension-label"
+              id="issue-dimension"
+              value={issueFilters.dimension}
+              onChange={(e) => handleIssueFilterChange('dimension', e.target.value)}
+              label={issuesText.filters.dimension}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="completeness">{dimensions.completeness}</MenuItem>
+              <MenuItem value="accuracy">{dimensions.accuracy}</MenuItem>
+              <MenuItem value="consistency">{dimensions.consistency}</MenuItem>
+              <MenuItem value="timeliness">{dimensions.timeliness}</MenuItem>
+              <MenuItem value="validity">{dimensions.validity}</MenuItem>
+              <MenuItem value="uniqueness">{dimensions.uniqueness}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <TextField
+            fullWidth
+            size="small"
+            label={issuesText.filters.search}
+            value={issueFilters.searchTerm}
+            onChange={(e) => handleIssueFilterChange('searchTerm', e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <SearchIcon color="action" />
+              )
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} md={2} textAlign="right">
+          <Button 
+            size="small" 
+            onClick={() => setIssueFilters({
+              severity: '',
+              status: '',
+              dimension: '',
+              searchTerm: ''
+            })}
+          >
+            {dashboard.clearFilters}
+          </Button>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  /**
+   * Render the issues tab content
+   * @returns {JSX.Element} - The issues tab content
+   */
+  const renderIssuesTab = () => {
+    const filteredIssues = getFilteredIssues();
+    
+    return (
+      <Box mt={2}>
+        {renderIssueFilters()}
+        
+        <Card>
+          <CardContent>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                {issuesText.title} ({filteredIssues.length})
+              </Typography>
+              <Box>
+                <Button 
+                  startIcon={<RefreshIcon />}
+                  size="small" 
+                  variant="outlined"
+                  onClick={fetchData}
+                  disabled={loading}
+                  sx={{ ml: 1 }}
+                >
+                  {dashboard.refreshData}
+                </Button>
+              </Box>
+            </Box>
+            
+            {loading ? (
+              <Box display="flex" justifyContent="center" my={4}>
+                <CircularProgress />
+              </Box>
+            ) : filteredIssues.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{issuesText.id}</TableCell>
+                      <TableCell>{issuesText.dataset}</TableCell>
+                      <TableCell>{issuesText.table}</TableCell>
+                      <TableCell>{issuesText.column}</TableCell>
+                      <TableCell>{issuesText.description}</TableCell>
+                      <TableCell>{issuesText.severity}</TableCell>
+                      <TableCell>{issuesText.status}</TableCell>
+                      <TableCell>{issuesText.healingStatus}</TableCell>
+                      <TableCell>{issuesText.detectedAt}</TableCell>
+                      <TableCell align="right">{issuesText.affectedRows}</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredIssues.map((issue) => (
+                      <TableRow key={issue.id}>
+                        <TableCell>{issue.id}</TableCell>
+                        <TableCell>{issue.dataset}</TableCell>
+                        <TableCell>{issue.table}</TableCell>
+                        <TableCell>{issue.column}</TableCell>
+                        <TableCell>{issue.description}</TableCell>
+                        <TableCell>
+                          <SeverityChip severity={issue.severity} />
+                        </TableCell>
+                        <TableCell>
+                          <StatusChip status={issue.status} />
+                        </TableCell>
+                        <TableCell>
+                          {issue.healingStatus && (
+                            <HealingStatusChip status={issue.healingStatus} />
+                          )}
+                        </TableCell>
+                        <TableCell>{formatRelativeTime(issue.detectedAt)}</TableCell>
+                        <TableCell align="right">{issue.affectedRows}</TableCell>
+                        <TableCell align="right">
+                          <Tooltip title={dashboard.viewDetails}>
+                            <IconButton size="small">
+                              <InfoIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Box py={4} textAlign="center">
+                <Typography variant="body1" color="text.secondary">
+                  {emptyStatesText.noIssues}
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
+  /**
+   * Render the rule filters
+   * @returns {JSX.Element} - The rule filters component
+   */
+  const renderRuleFilters = () => (
+    <Box mb={2} p={2} bgcolor="background.paper" borderRadius={1} boxShadow={1}>
+      <Typography variant="subtitle2" gutterBottom>
+        {rulesText.filters.title}
+      </Typography>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="rule-type-label">{rulesText.filters.type}</InputLabel>
+            <Select
+              labelId="rule-type-label"
+              id="rule-type"
+              value={ruleFilters.type}
+              onChange={(e) => handleRuleFilterChange('type', e.target.value)}
+              label={rulesText.filters.type}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="schema">{rulesText.type.schema}</MenuItem>
+              <MenuItem value="nullCheck">{rulesText.type.nullCheck}</MenuItem>
+              <MenuItem value="valueRange">{rulesText.type.valueRange}</MenuItem>
+              <MenuItem value="referential">{rulesText.type.referential}</MenuItem>
+              <MenuItem value="patternMatch">{rulesText.type.patternMatch}</MenuItem>
+              <MenuItem value="uniqueness">{rulesText.type.uniqueness}</MenuItem>
+              <MenuItem value="statistical">{rulesText.type.statistical}</MenuItem>
+              <MenuItem value="custom">{rulesText.type.custom}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="rule-dimension-label">{rulesText.filters.dimension}</InputLabel>
+            <Select
+              labelId="rule-dimension-label"
+              id="rule-dimension"
+              value={ruleFilters.dimension}
+              onChange={(e) => handleRuleFilterChange('dimension', e.target.value)}
+              label={rulesText.filters.dimension}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="completeness">{dimensions.completeness}</MenuItem>
+              <MenuItem value="accuracy">{dimensions.accuracy}</MenuItem>
+              <MenuItem value="consistency">{dimensions.consistency}</MenuItem>
+              <MenuItem value="timeliness">{dimensions.timeliness}</MenuItem>
+              <MenuItem value="validity">{dimensions.validity}</MenuItem>
+              <MenuItem value="uniqueness">{dimensions.uniqueness}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="rule-severity-label">{rulesText.filters.severity}</InputLabel>
+            <Select
+              labelId="rule-severity-label"
+              id="rule-severity"
+              value={ruleFilters.severity}
+              onChange={(e) => handleRuleFilterChange('severity', e.target.value)}
+              label={rulesText.filters.severity}
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="high">{issuesText.severity.high}</MenuItem>
+              <MenuItem value="medium">{issuesText.severity.medium}</MenuItem>
+              <MenuItem value="low">{issuesText.severity.low}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="rule-active-label">{rulesText.filters.active}</InputLabel>
+            <Select
+              labelId="rule-active-label"
+              id="rule-active"
+              value={ruleFilters.active}
+              onChange={(e) => handleRuleFilterChange('active', e.target.value)}
+              label={rulesText.filters.active}
+            >
+              <MenuItem value="">{rulesText.filters.all}</MenuItem>
+              <MenuItem value="activeOnly">{rulesText.filters.activeOnly}</MenuItem>
+              <MenuItem value="inactiveOnly">{rulesText.filters.inactiveOnly}</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <TextField
+            fullWidth
+            size="small"
+            label={rulesText.filters.search}
+            value={ruleFilters.searchTerm}
+            onChange={(e) => handleRuleFilterChange('searchTerm', e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <SearchIcon color="action" />
+              )
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2} textAlign="right">
+          <Button 
+            size="small" 
+            onClick={() => setRuleFilters({
+              type: '',
+              dimension: '',
+              severity: '',
+              active: '',
+              searchTerm: ''
+            })}
+          >
+            {dashboard.clearFilters}
+          </Button>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
+  /**
+   * Render the rules tab content
+   * @returns {JSX.Element} - The rules tab content
+   */
+  const renderRulesTab = () => {
+    const filteredRules = getFilteredRules();
+    
+    return (
+      <Box mt={2}>
+        {renderRuleFilters()}
+        
+        <Card>
+          <CardContent>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                {rulesText.title} ({filteredRules.length})
+              </Typography>
+              <Box>
+                <Button 
+                  startIcon={<AddIcon />}
+                  size="small" 
+                  variant="contained"
+                  color="primary"
+                >
+                  {dashboard.addRule}
+                </Button>
+              </Box>
+            </Box>
+            
+            {loading ? (
+              <Box display="flex" justifyContent="center" my={4}>
+                <CircularProgress />
+              </Box>
+            ) : filteredRules.length > 0 ? (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{rulesText.id}</TableCell>
+                      <TableCell>{rulesText.name}</TableCell>
+                      <TableCell>{rulesText.dataset}</TableCell>
+                      <TableCell>{rulesText.table}</TableCell>
+                      <TableCell>{rulesText.column}</TableCell>
+                      <TableCell>{rulesText.type}</TableCell>
+                      <TableCell>{rulesText.dimension}</TableCell>
+                      <TableCell>{rulesText.severity}</TableCell>
+                      <TableCell>{rulesText.active}</TableCell>
+                      <TableCell>{rulesText.successRate}</TableCell>
+                      <TableCell>{rulesText.lastExecuted}</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredRules.map((rule) => (
+                      <TableRow key={rule.id}>
+                        <TableCell>{rule.id}</TableCell>
+                        <TableCell>{rule.name}</TableCell>
+                        <TableCell>{rule.dataset}</TableCell>
+                        <TableCell>{rule.table}</TableCell>
+                        <TableCell>{rule.column}</TableCell>
+                        <TableCell>{rulesText.type[rule.type] || rule.type}</TableCell>
+                        <TableCell>{dimensions[rule.dimension] || rule.dimension}</TableCell>
+                        <TableCell>
+                          <SeverityChip severity={rule.severity} />
+                        </TableCell>
+                        <TableCell>
+                          {rule.active ? (
+                            <Chip size="small" color="success" label="Active" />
+                          ) : (
+                            <Chip size="small" label="Inactive" />
+                          )}
+                        </TableCell>
+                        <TableCell>{rule.successRate}%</TableCell>
+                        <TableCell>{formatRelativeTime(rule.lastExecuted)}</TableCell>
+                        <TableCell align="right">
+                          <Tooltip title={dashboard.editRule}>
+                            <IconButton size="small" sx={{ mr: 1 }}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={rulesText.deleteRule}>
+                            <IconButton size="small">
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Box py={4} textAlign="center">
+                <Typography variant="body1" color="text.secondary">
+                  {emptyStatesText.noRules}
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
+  /**
+   * Render the trends tab content
+   * @returns {JSX.Element} - The trends tab content
+   */
+  const renderTrendsTab = () => (
+    <Box mt={2}>
+      <Card>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">
+              {trendsText.title}
+            </Typography>
+            <Box>
+              <FormControl variant="outlined" size="small">
+                <InputLabel id="time-range-label">{trendsText.timeRange}</InputLabel>
+                <Select
+                  labelId="time-range-label"
+                  id="time-range"
+                  value={timeRange}
+                  onChange={(e) => handleTimeRangeChange(e.target.value)}
+                  label={trendsText.timeRange}
+                >
+                  <MenuItem value="last24Hours">{trendsText.last24Hours}</MenuItem>
+                  <MenuItem value="last7Days">{trendsText.last7Days}</MenuItem>
+                  <MenuItem value="last30Days">{trendsText.last30Days}</MenuItem>
+                  <MenuItem value="last90Days">{trendsText.last90Days}</MenuItem>
+                  <MenuItem value="custom">{trendsText.custom}</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+          
+          {loading ? (
+            <Box display="flex" justifyContent="center" my={4}>
+              <CircularProgress />
+            </Box>
+          ) : qualityData?.trendData ? (
+            <Box>
+              <Box mb={4}>
+                <Typography variant="subtitle1" gutterBottom>
+                  {trendsText.overallTrend}
+                </Typography>
+                <Box height={300} display="flex" alignItems="center" justifyContent="center">
+                  <Typography variant="body2" color="text.secondary">
+                    Chart visualization would appear here showing trend data over time
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  {trendsText.dimensionTrends}
+                </Typography>
+                <Box height={300} display="flex" alignItems="center" justifyContent="center">
+                  <Typography variant="body2" color="text.secondary">
+                    Chart visualization would appear here showing dimension trends over time
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          ) : (
+            <Box py={4} textAlign="center">
+              <Typography variant="body1" color="text.secondary">
+                {emptyStatesText.noTrends}
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
+  );
+
+  /**
+   * Render the notification toast
+   * @returns {JSX.Element|null} - The notification component or null if no notification
+   */
+  const renderNotification = () => {
+    if (!notification) return null;
+    
+    const bgColor = notification.type === 'success' ? '#4caf50' : '#f44336';
+    
+    return (
+      <Box
+        position="fixed"
+        bottom={24}
+        right={24}
+        bgcolor={bgColor}
+        color="white"
+        px={3}
+        py={2}
+        borderRadius={1}
+        boxShadow={2}
+        zIndex={9999}
+        display="flex"
+        alignItems="center"
+      >
+        <Typography variant="body2">{notification.message}</Typography>
+        <IconButton size="small" sx={{ ml: 1, color: 'white' }} onClick={() => setNotification(null)}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+    );
+  };
+
+  return (
+    <Container maxWidth="xl">
+      {renderHeader()}
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <Tab label={dashboard.overview} id="tab-0" aria-controls="tabpanel-0" />
+          <Tab 
+            label={
+              <Badge badgeContent={issues.length} color="error" max={99}>
+                {dashboard.issues}
+              </Badge>
+            } 
+            id="tab-1" 
+            aria-controls="tabpanel-1" 
+          />
+          <Tab 
+            label={
+              <Badge badgeContent={rules.length} color="primary" max={99}>
+                {dashboard.rules}
+              </Badge>
+            } 
+            id="tab-2" 
+            aria-controls="tabpanel-2" 
+          />
+          <Tab label={dashboard.trends} id="tab-3" aria-controls="tabpanel-3" />
+        </Tabs>
+      </Box>
+      
+      <Box role="tabpanel" hidden={activeTab !== 0} id="tabpanel-0" aria-labelledby="tab-0">
+        {activeTab === 0 && renderOverviewTab()}
+      </Box>
+      
+      <Box role="tabpanel" hidden={activeTab !== 1} id="tabpanel-1" aria-labelledby="tab-1">
+        {activeTab === 1 && renderIssuesTab()}
+      </Box>
+      
+      <Box role="tabpanel" hidden={activeTab !== 2} id="tabpanel-2" aria-labelledby="tab-2">
+        {activeTab === 2 && renderRulesTab()}
+      </Box>
+      
+      <Box role="tabpanel" hidden={activeTab !== 3} id="tabpanel-3" aria-labelledby="tab-3">
+        {activeTab === 3 && renderTrendsTab()}
+      </Box>
+      
+      {renderNotification()}
+    </Container>
+  );
+};
+
+// PropTypes for the component
+DataQualityDashboard.propTypes = {
+  translations: PropTypes.object
+};
+
+export default DataQualityDashboard;
