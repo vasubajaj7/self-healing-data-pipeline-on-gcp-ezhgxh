@@ -1,0 +1,286 @@
+# Default values for self-healing-pipeline
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  environment: development
+  project:
+    id: self-healing-pipeline-dev
+    region: us-central1
+  image:
+    registry: gcr.io/self-healing-pipeline-dev
+    tag: latest
+    pullPolicy: Always
+
+backend:
+  enabled: true
+  name: backend
+  replicaCount: 2
+  image:
+    repository: self-healing-pipeline/backend
+  service:
+    type: ClusterIP
+    port: 8080
+    metricsPort: 8081
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  livenessProbe:
+    path: /health/liveness
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    path: /health/readiness
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startupProbe:
+    path: /health/startup
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 30
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: /metrics
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: component
+              operator: In
+              values:
+              - backend
+          topologyKey: kubernetes.io/hostname
+
+web:
+  enabled: true
+  name: web
+  replicaCount: 2
+  image:
+    repository: self-healing-pipeline/web
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    path: /health
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: component
+              operator: In
+              values:
+              - web
+          topologyKey: kubernetes.io/hostname
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+  hosts:
+    - host: pipeline.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: backend
+          port: 8080
+  tls: []
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    retention: 7d
+    storageClass: standard
+    storageSize: 20Gi
+  grafana:
+    enabled: true
+    adminPassword: admin
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    persistence:
+      enabled: true
+      storageClassName: standard
+      size: 5Gi
+  alertmanager:
+    enabled: true
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['job', 'alertname', 'severity']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
+        receiver: default-receiver
+        routes:
+        - match:
+            severity: critical
+          receiver: teams-critical
+          repeat_interval: 1h
+        - match:
+            severity: warning
+          receiver: teams-warning
+          repeat_interval: 4h
+      receivers:
+      - name: default-receiver
+        email_configs:
+        - to: alerts@example.com
+          send_resolved: true
+      - name: teams-critical
+        webhook_configs:
+        - url: https://webhook.example.com/teams-critical
+          send_resolved: true
+        email_configs:
+        - to: critical@example.com
+          send_resolved: true
+      - name: teams-warning
+        webhook_configs:
+        - url: https://webhook.example.com/teams-warning
+          send_resolved: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+security:
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: self-healing-pipeline@self-healing-pipeline-dev.iam.gserviceaccount.com
+  rbac:
+    create: true
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+  networkPolicy:
+    enabled: true
+    additionalRules: []
+  certManager:
+    enabled: false
+    issuer:
+      name: letsencrypt-staging
+      kind: ClusterIssuer
+      server: https://acme-staging-v02.api.letsencrypt.org/directory
+      email: admin@example.com
+
+config:
+  pipeline:
+    logLevel: INFO
+    enableMetrics: true
+    enableTracing: true
+    gcsBucket: self-healing-pipeline-dev
+    bigqueryDataset: self_healing_pipeline_dev
+  quality:
+    validationTimeoutSeconds: 300
+    qualityScoreThreshold: 90
+    enableAutoValidation: true
+  healing:
+    mode: semi-automatic
+    confidenceThreshold: 90
+    maxRetryAttempts: 3
+    approvalRequired: high-impact-only
+    learningMode: active
+  featureFlags:
+    enableExperimentalFeatures: false
+    enableDebugMode: true
+    enablePerformanceTesting: false
+    enableMockData: true
+  secrets:
+    databaseCredentials:
+      create: true
+      cloudsqlUser: pipeline_user
+      cloudsqlPassword: ""
+      cloudsqlConnectionName: self-healing-pipeline-dev:us-central1:pipeline-dev-db
+    apiKeys:
+      create: true
+      externalApiKey: ""
+    oauthCredentials:
+      create: true
+      clientId: ""
+      clientSecret: ""
