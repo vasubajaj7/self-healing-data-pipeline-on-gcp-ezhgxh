@@ -1,0 +1,349 @@
+{
+  "pageTitle": "Pipeline Management",
+  "breadcrumbs": {
+    "home": "Home",
+    "pipelines": "Pipelines",
+    "details": "Pipeline Details",
+    "execution": "Execution Details",
+    "history": "Execution History",
+    "create": "Create Pipeline",
+    "edit": "Edit Pipeline"
+  },
+  "inventory": {
+    "title": "Pipeline Inventory",
+    "search": "Search pipelines...",
+    "statusFilter": {
+      "label": "Status",
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "createButton": "Create Pipeline",
+    "columns": {
+      "name": "Name",
+      "source": "Source",
+      "target": "Target",
+      "status": "Status",
+      "lastRun": "Last Run",
+      "nextRun": "Next Run",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "emptyState": "No pipelines found. Create a new pipeline to get started.",
+    "deleteConfirmation": {
+      "title": "Delete Pipeline",
+      "message": "Are you sure you want to delete this pipeline? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "details": {
+    "title": "Pipeline Details",
+    "actions": {
+      "run": "Run Now",
+      "enable": "Enable",
+      "disable": "Disable",
+      "edit": "Edit",
+      "delete": "Delete",
+      "viewHistory": "View History",
+      "refresh": "Refresh"
+    },
+    "sections": {
+      "overview": "Overview",
+      "configuration": "Configuration",
+      "schedule": "Schedule",
+      "metadata": "Metadata"
+    },
+    "fields": {
+      "id": "Pipeline ID",
+      "name": "Name",
+      "description": "Description",
+      "source": "Source",
+      "sourceType": "Source Type",
+      "target": "Target",
+      "targetType": "Target Type",
+      "status": "Status",
+      "createdAt": "Created At",
+      "createdBy": "Created By",
+      "updatedAt": "Updated At",
+      "updatedBy": "Updated By",
+      "lastRun": "Last Run",
+      "nextRun": "Next Run",
+      "schedule": "Schedule",
+      "dagId": "DAG ID",
+      "version": "Version"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "confirmations": {
+      "run": {
+        "title": "Run Pipeline",
+        "message": "Are you sure you want to run this pipeline now?",
+        "cancel": "Cancel",
+        "confirm": "Run"
+      },
+      "enable": {
+        "title": "Enable Pipeline",
+        "message": "Are you sure you want to enable this pipeline?",
+        "cancel": "Cancel",
+        "confirm": "Enable"
+      },
+      "disable": {
+        "title": "Disable Pipeline",
+        "message": "Are you sure you want to disable this pipeline?",
+        "cancel": "Cancel",
+        "confirm": "Disable"
+      }
+    },
+    "notifications": {
+      "runSuccess": "Pipeline execution started successfully",
+      "runError": "Failed to start pipeline execution",
+      "enableSuccess": "Pipeline enabled successfully",
+      "enableError": "Failed to enable pipeline",
+      "disableSuccess": "Pipeline disabled successfully",
+      "disableError": "Failed to disable pipeline",
+      "deleteSuccess": "Pipeline deleted successfully",
+      "deleteError": "Failed to delete pipeline"
+    }
+  },
+  "execution": {
+    "title": "Execution Details",
+    "actions": {
+      "cancel": "Cancel Execution",
+      "retry": "Retry Execution",
+      "viewLogs": "View Logs",
+      "viewTasks": "View Tasks",
+      "refresh": "Refresh"
+    },
+    "fields": {
+      "executionId": "Execution ID",
+      "pipelineId": "Pipeline ID",
+      "pipelineName": "Pipeline Name",
+      "status": "Status",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "triggeredBy": "Triggered By",
+      "triggerType": "Trigger Type"
+    },
+    "status": {
+      "RUNNING": "Running",
+      "SUCCESS": "Success",
+      "FAILED": "Failed",
+      "PARTIALLY_SUCCEEDED": "Partially Succeeded",
+      "CANCELLED": "Cancelled",
+      "PENDING": "Pending"
+    },
+    "taskSummary": {
+      "title": "Task Summary",
+      "total": "Total Tasks",
+      "success": "Successful",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending",
+      "skipped": "Skipped"
+    },
+    "recentTasks": {
+      "title": "Recent Tasks",
+      "viewAll": "View All Tasks"
+    },
+    "confirmations": {
+      "cancel": {
+        "title": "Cancel Execution",
+        "message": "Are you sure you want to cancel this execution?",
+        "cancel": "No",
+        "confirm": "Yes, Cancel"
+      },
+      "retry": {
+        "title": "Retry Execution",
+        "message": "Are you sure you want to retry this execution?",
+        "fromFailed": "Retry only failed tasks",
+        "fromAll": "Retry all tasks",
+        "cancel": "Cancel",
+        "confirm": "Retry"
+      }
+    },
+    "notifications": {
+      "cancelSuccess": "Execution cancelled successfully",
+      "cancelError": "Failed to cancel execution",
+      "retrySuccess": "Execution retry initiated successfully",
+      "retryError": "Failed to retry execution"
+    }
+  },
+  "tasks": {
+    "title": "Task Executions",
+    "refresh": "Refresh",
+    "autoRefresh": "Auto-refresh",
+    "filter": {
+      "label": "Filter by Status",
+      "all": "All Statuses",
+      "success": "Successful",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending",
+      "skipped": "Skipped"
+    },
+    "columns": {
+      "taskId": "Task ID",
+      "name": "Task Name",
+      "type": "Task Type",
+      "status": "Status",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "retries": "Retries",
+      "error": "Error"
+    },
+    "status": {
+      "SUCCESS": "Success",
+      "FAILED": "Failed",
+      "RUNNING": "Running",
+      "PENDING": "Pending",
+      "SKIPPED": "Skipped",
+      "UPSTREAM_FAILED": "Upstream Failed"
+    },
+    "duration": {
+      "notStarted": "Not started",
+      "running": "Running...",
+      "format": "{{hours}}h {{minutes}}m {{seconds}}s"
+    },
+    "error": {
+      "details": "Error Details",
+      "noError": "No error",
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "emptyState": "No tasks found for this execution."
+  },
+  "dag": {
+    "title": "Pipeline DAG",
+    "loading": "Loading DAG visualization...",
+    "emptyState": "No tasks to display in the DAG.",
+    "nodeDetails": {
+      "type": "Type: {{type}}",
+      "startTime": "Started: {{time}}",
+      "notStarted": "Not started yet"
+    }
+  },
+  "history": {
+    "title": "Execution History",
+    "filter": {
+      "label": "Filter by Status",
+      "all": "All Statuses",
+      "success": "Successful",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending",
+      "cancelled": "Cancelled"
+    },
+    "columns": {
+      "executionId": "Execution ID",
+      "status": "Status",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "triggeredBy": "Triggered By",
+      "actions": "Actions"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "viewLogs": "View Logs",
+      "retry": "Retry"
+    },
+    "emptyState": "No execution history found for this pipeline."
+  },
+  "forms": {
+    "create": {
+      "title": "Create Pipeline",
+      "submit": "Create",
+      "cancel": "Cancel"
+    },
+    "edit": {
+      "title": "Edit Pipeline",
+      "submit": "Save Changes",
+      "cancel": "Cancel"
+    },
+    "fields": {
+      "name": {
+        "label": "Pipeline Name",
+        "placeholder": "Enter pipeline name",
+        "helper": "A descriptive name for the pipeline"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter pipeline description",
+        "helper": "Optional description of the pipeline's purpose"
+      },
+      "source": {
+        "label": "Source",
+        "placeholder": "Select data source",
+        "helper": "The data source for this pipeline"
+      },
+      "sourceConfig": {
+        "label": "Source Configuration",
+        "placeholder": "Enter source configuration",
+        "helper": "Configuration details for the data source"
+      },
+      "target": {
+        "label": "Target",
+        "placeholder": "Select data target",
+        "helper": "The destination for processed data"
+      },
+      "targetConfig": {
+        "label": "Target Configuration",
+        "placeholder": "Enter target configuration",
+        "helper": "Configuration details for the data target"
+      },
+      "schedule": {
+        "label": "Schedule",
+        "placeholder": "Set execution schedule",
+        "helper": "When this pipeline should run",
+        "options": {
+          "manual": "Manual Execution Only",
+          "hourly": "Hourly",
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "custom": "Custom Schedule"
+        }
+      },
+      "status": {
+        "label": "Status",
+        "options": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "helper": "Whether the pipeline is enabled or disabled"
+      },
+      "dagId": {
+        "label": "DAG ID",
+        "placeholder": "Enter DAG ID",
+        "helper": "Identifier for the Airflow DAG"
+      },
+      "advanced": {
+        "label": "Advanced Configuration",
+        "placeholder": "Enter JSON configuration",
+        "helper": "Additional configuration in JSON format"
+      }
+    },
+    "validation": {
+      "nameRequired": "Pipeline name is required",
+      "nameLength": "Pipeline name must be between 3 and 50 characters",
+      "sourceRequired": "Source is required",
+      "targetRequired": "Target is required",
+      "dagIdRequired": "DAG ID is required",
+      "invalidJson": "Invalid JSON format"
+    },
+    "notifications": {
+      "createSuccess": "Pipeline created successfully",
+      "createError": "Failed to create pipeline",
+      "updateSuccess": "Pipeline updated successfully",
+      "updateError": "Failed to update pipeline"
+    }
+  }
+}
