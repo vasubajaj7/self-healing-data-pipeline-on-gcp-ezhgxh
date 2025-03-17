@@ -1,0 +1,204 @@
+---
+# Role for backend components with permissions for data processing and job management
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-role
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: backend
+    managed-by: kustomize
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create"]
+---
+# Role for web frontend components with minimal access requirements
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: web-role
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: web
+    managed-by: kustomize
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+---
+# Role for monitoring components within the pipeline namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: monitoring-role
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: monitoring
+    managed-by: kustomize
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "endpoints", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+---
+# Role for self-healing components with permissions to modify resources as needed
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: healing-role
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: self-healing
+    managed-by: kustomize
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create"]
+---
+# ClusterRole for monitoring components that need access to cluster-wide metrics
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring-cluster-role
+  labels:
+    app: self-healing-pipeline
+    component: monitoring
+    managed-by: kustomize
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "nodes/proxy", "nodes/stats"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+---
+# RoleBinding for backend service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-role-binding
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: backend
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-backend-sa
+    namespace: self-healing-pipeline
+roleRef:
+  kind: Role
+  name: backend-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for web service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: web-role-binding
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: web
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-web-sa
+    namespace: self-healing-pipeline
+roleRef:
+  kind: Role
+  name: web-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for monitoring service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring-role-binding
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: monitoring
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-monitoring-sa
+    namespace: self-healing-pipeline
+roleRef:
+  kind: Role
+  name: monitoring-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# RoleBinding for healing service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: healing-role-binding
+  namespace: self-healing-pipeline
+  labels:
+    app: self-healing-pipeline
+    component: self-healing
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-healing-sa
+    namespace: self-healing-pipeline
+roleRef:
+  kind: Role
+  name: healing-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ClusterRoleBinding for monitoring service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring-cluster-role-binding
+  labels:
+    app: self-healing-pipeline
+    component: monitoring
+    managed-by: kustomize
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-monitoring-sa
+    namespace: self-healing-pipeline
+roleRef:
+  kind: ClusterRole
+  name: monitoring-cluster-role
+  apiGroup: rbac.authorization.k8s.io
