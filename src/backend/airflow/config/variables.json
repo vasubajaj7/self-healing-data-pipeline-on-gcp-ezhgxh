@@ -1,0 +1,286 @@
+{
+  "environment": "development",
+  "gcp_project_id": "self-healing-pipeline-dev",
+  "gcp_location": "us-central1",
+  "gcp_keyfile_json": "",
+  "storage": {
+    "gcs_bucket": "self-healing-pipeline-data",
+    "gcs_staging_bucket": "self-healing-pipeline-staging",
+    "gcs_archive_bucket": "self-healing-pipeline-archive"
+  },
+  "bigquery": {
+    "dataset": "pipeline_data",
+    "location": "us-central1",
+    "temp_dataset": "pipeline_temp",
+    "metadata_dataset": "pipeline_metadata"
+  },
+  "connections": {
+    "cloudsql": {
+      "customer": {
+        "host": "10.0.0.1",
+        "user": "pipeline_user",
+        "password": "",
+        "database": "customer_db"
+      },
+      "sales": {
+        "host": "10.0.0.2",
+        "user": "pipeline_user",
+        "password": "",
+        "database": "sales_db"
+      },
+      "product": {
+        "host": "10.0.0.3",
+        "user": "pipeline_user",
+        "password": "",
+        "database": "product_db"
+      }
+    },
+    "apis": {
+      "product": {
+        "host": "api.productcatalog.example.com",
+        "key": "",
+        "secret": "",
+        "token_url": "https://api.productcatalog.example.com/oauth/token"
+      },
+      "vendor": {
+        "host": "api.vendor.example.com",
+        "key": ""
+      }
+    },
+    "sftp": {
+      "vendor": {
+        "host": "sftp.vendor.example.com",
+        "user": "pipeline_user",
+        "password": "",
+        "key_file": ""
+      }
+    },
+    "notifications": {
+      "teams_webhook_url": "https://outlook.office.com/webhook/...",
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": "587",
+        "user": "pipeline-alerts@example.com",
+        "password": ""
+      }
+    }
+  },
+  "vertex_ai": {
+    "region": "us-central1"
+  },
+  "data_sources": {
+    "gcs": [
+      {
+        "source_id": "customer_data",
+        "bucket_name": "self-healing-pipeline-data",
+        "file_path": "customer/",
+        "file_pattern": "customer_data_*.csv",
+        "file_format": "CSV",
+        "dataset_id": "pipeline_data",
+        "table_id": "customer_data",
+        "schema_file": "schemas/customer_schema.json",
+        "quality_rules_path": "quality_rules/customer_rules.json"
+      },
+      {
+        "source_id": "sales_data",
+        "bucket_name": "self-healing-pipeline-data",
+        "file_path": "sales/",
+        "file_pattern": "sales_data_*.parquet",
+        "file_format": "PARQUET",
+        "dataset_id": "pipeline_data",
+        "table_id": "sales_data",
+        "schema_file": "schemas/sales_schema.json",
+        "quality_rules_path": "quality_rules/sales_rules.json"
+      },
+      {
+        "source_id": "product_data",
+        "bucket_name": "self-healing-pipeline-data",
+        "file_path": "product/",
+        "file_pattern": "product_data_*.json",
+        "file_format": "JSON",
+        "dataset_id": "pipeline_data",
+        "table_id": "product_data",
+        "schema_file": "schemas/product_schema.json",
+        "quality_rules_path": "quality_rules/product_rules.json"
+      }
+    ],
+    "cloudsql": [
+      {
+        "source_id": "customer_orders",
+        "connection_id": "cloudsql_customer",
+        "database_type": "postgres",
+        "table_name": "orders",
+        "columns": "*",
+        "incremental_field": "updated_at",
+        "dataset_id": "pipeline_data",
+        "table_id": "customer_orders",
+        "schema_file": "schemas/customer_orders_schema.json",
+        "quality_rules_path": "quality_rules/customer_orders_rules.json"
+      },
+      {
+        "source_id": "sales_transactions",
+        "connection_id": "cloudsql_sales",
+        "database_type": "postgres",
+        "table_name": "transactions",
+        "columns": "*",
+        "incremental_field": "transaction_date",
+        "dataset_id": "pipeline_data",
+        "table_id": "sales_transactions",
+        "schema_file": "schemas/sales_transactions_schema.json",
+        "quality_rules_path": "quality_rules/sales_transactions_rules.json"
+      },
+      {
+        "source_id": "product_inventory",
+        "connection_id": "cloudsql_product",
+        "database_type": "postgres",
+        "table_name": "inventory",
+        "columns": "*",
+        "incremental_field": "last_updated",
+        "dataset_id": "pipeline_data",
+        "table_id": "product_inventory",
+        "schema_file": "schemas/product_inventory_schema.json",
+        "quality_rules_path": "quality_rules/product_inventory_rules.json"
+      }
+    ],
+    "api": [
+      {
+        "source_id": "product_catalog",
+        "connection_id": "product_api",
+        "endpoint_path": "/v2/products",
+        "method": "GET",
+        "auth_type": "oauth2",
+        "data_path": "$.products",
+        "pagination_type": "page_parameter",
+        "pagination_params": {
+          "page_param": "page",
+          "size_param": "size",
+          "page_size": 100,
+          "max_pages": 0
+        },
+        "dataset_id": "pipeline_data",
+        "table_id": "product_catalog",
+        "schema_file": "schemas/product_catalog_schema.json",
+        "quality_rules_path": "quality_rules/product_catalog_rules.json"
+      },
+      {
+        "source_id": "vendor_data",
+        "connection_id": "vendor_api",
+        "endpoint_path": "/api/vendors",
+        "method": "GET",
+        "auth_type": "api_key",
+        "data_path": "$.data",
+        "pagination_type": "offset_parameter",
+        "pagination_params": {
+          "offset_param": "offset",
+          "limit_param": "limit",
+          "limit_value": 50,
+          "max_records": 0
+        },
+        "dataset_id": "pipeline_data",
+        "table_id": "vendor_data",
+        "schema_file": "schemas/vendor_data_schema.json",
+        "quality_rules_path": "quality_rules/vendor_data_rules.json"
+      }
+    ]
+  },
+  "quality_validation": {
+    "default_threshold": 0.95,
+    "critical_threshold": 0.98,
+    "warning_threshold": 0.9,
+    "datasets": [
+      {
+        "dataset_id": "customer_data",
+        "description": "Customer master data",
+        "criticality": "high",
+        "threshold": 0.98,
+        "rules_path": "quality_rules/customer_rules.json"
+      },
+      {
+        "dataset_id": "sales_data",
+        "description": "Sales transaction data",
+        "criticality": "high",
+        "threshold": 0.98,
+        "rules_path": "quality_rules/sales_rules.json"
+      },
+      {
+        "dataset_id": "product_data",
+        "description": "Product catalog data",
+        "criticality": "medium",
+        "threshold": 0.95,
+        "rules_path": "quality_rules/product_rules.json"
+      }
+    ]
+  },
+  "self_healing": {
+    "enabled": true,
+    "mode": "SEMI_AUTOMATIC",
+    "confidence_threshold": 0.85,
+    "max_retry_attempts": 3,
+    "approval_required": "high_impact_only",
+    "learning_mode": "active",
+    "schedule": "0 */4 * * *",
+    "rules_path": "healing_rules/healing_rules.json",
+    "model_registry": "models/healing"
+  },
+  "monitoring": {
+    "enabled": true,
+    "interval_minutes": 15,
+    "metrics_retention_days": 30,
+    "alert_rules_path": "alert_rules/alert_rules.json",
+    "notification_channels": {
+      "critical": ["teams", "email"],
+      "high": ["teams", "email"],
+      "medium": ["teams"],
+      "low": ["teams"]
+    },
+    "email_recipients": {
+      "critical": ["data-engineering@example.com", "operations@example.com"],
+      "high": ["data-engineering@example.com"],
+      "medium": [],
+      "low": []
+    },
+    "teams_channels": {
+      "critical": "pipeline-alerts",
+      "high": "pipeline-alerts",
+      "medium": "pipeline-monitoring",
+      "low": "pipeline-monitoring"
+    }
+  },
+  "optimization": {
+    "enabled": true,
+    "interval_days": 7,
+    "auto_apply": false,
+    "confidence_threshold": 0.9,
+    "query_optimization": {
+      "enabled": true,
+      "min_execution_count": 5,
+      "min_slot_seconds": 100
+    },
+    "schema_optimization": {
+      "enabled": true,
+      "partitioning_enabled": true,
+      "clustering_enabled": true,
+      "min_table_size_gb": 1
+    },
+    "resource_optimization": {
+      "enabled": true,
+      "bigquery_slots_optimization": true,
+      "composer_workers_optimization": true,
+      "storage_optimization": true
+    }
+  },
+  "pipeline_schedules": {
+    "customer_data_ingestion": "0 1 * * *",
+    "sales_data_ingestion": "0 2 * * *",
+    "product_data_ingestion": "0 3 * * *",
+    "customer_orders_ingestion": "0 4 * * *",
+    "sales_transactions_ingestion": "0 5 * * *",
+    "product_inventory_ingestion": "0 6 * * *",
+    "product_catalog_ingestion": "0 7 * * *",
+    "vendor_data_ingestion": "0 8 * * *",
+    "quality_validation": "0 9 * * *",
+    "monitoring": "*/15 * * * *",
+    "self_healing": "0 */4 * * *",
+    "optimization": "0 0 * * 0"
+  }
+}
