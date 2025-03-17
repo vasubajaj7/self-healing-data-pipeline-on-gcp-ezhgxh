@@ -1,0 +1,380 @@
+# =========================================================================
+# Self-Healing AI Engine Configuration
+# =========================================================================
+# File: healing_rules.yaml
+# Version: 1.0.0
+# Last Updated: 2023-06-15
+#
+# This file defines the rules, patterns, and actions for the self-healing
+# AI engine that automatically detects and resolves issues in the data pipeline.
+# 
+# The configuration includes:
+# - Global settings for the healing engine
+# - Action type definitions and thresholds
+# - Specific healing rules for various issue types
+# - Rule sets for different operational contexts
+# - Severity thresholds for confidence levels
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# Global Settings
+# -------------------------------------------------------------------------
+# Central configuration parameters that govern the overall behavior
+# of the self-healing engine
+# -------------------------------------------------------------------------
+global_settings:
+  description: "Global configuration settings for the self-healing engine"
+  # Available modes: automatic, semi_automatic, recommendation_only
+  healing_mode: "semi_automatic"
+  # Default confidence level (0.0-1.0) required for taking automatic action
+  confidence_threshold: 0.85
+  # Maximum number of retry attempts for any healing action
+  max_retry_attempts: 3
+  # When approval is required: always, high_impact_only, never
+  approval_required: "high_impact_only"
+  # Whether the system should learn from successful/failed healing attempts
+  learning_mode: "active"
+
+# -------------------------------------------------------------------------
+# Action Types
+# -------------------------------------------------------------------------
+# Definitions of the various categories of healing actions that can be 
+# performed, along with their default settings
+# -------------------------------------------------------------------------
+action_types:
+  DATA_CORRECTION:
+    enabled: true
+    confidence_threshold: 0.9
+    max_retry_attempts: 2
+    approval_required: "high_impact_only"
+    description: "Corrects data quality issues such as missing values, outliers, and format errors"
+  
+  SCHEMA_EVOLUTION:
+    enabled: true
+    confidence_threshold: 0.95
+    max_retry_attempts: 1
+    approval_required: "always"
+    description: "Handles schema changes and mapping between different versions"
+  
+  PARAMETER_ADJUSTMENT:
+    enabled: true
+    confidence_threshold: 0.8
+    max_retry_attempts: 3
+    approval_required: "high_impact_only"
+    description: "Adjusts pipeline parameters to optimize performance or fix issues"
+  
+  RESOURCE_SCALING:
+    enabled: true
+    confidence_threshold: 0.85
+    max_retry_attempts: 2
+    approval_required: "high_impact_only"
+    description: "Scales resources up or down to address resource-related issues"
+  
+  PIPELINE_RETRY:
+    enabled: true
+    confidence_threshold: 0.75
+    max_retry_attempts: 3
+    approval_required: "never"
+    description: "Retries failed pipeline tasks with the same or adjusted parameters"
+  
+  DEPENDENCY_RESOLUTION:
+    enabled: true
+    confidence_threshold: 0.9
+    max_retry_attempts: 2
+    approval_required: "always"
+    description: "Resolves issues with dependencies between pipeline components"
+
+# -------------------------------------------------------------------------
+# Self-Healing Rules
+# -------------------------------------------------------------------------
+# Specific rules that define how to detect and resolve different types
+# of issues in the data pipeline. Each rule includes:
+# - Unique identifier
+# - Issue type it addresses
+# - Confidence threshold specific to this rule
+# - One or more healing actions with parameters and priorities
+# -------------------------------------------------------------------------
+rules:
+  # Rule for handling missing values in datasets
+  - rule_id: "missing_values_rule"
+    description: "Rule for handling missing values in datasets"
+    issue_type: "missing_values"
+    confidence_threshold: 0.85
+    actions:
+      # Use mean value for numeric fields
+      - strategy: "mean_imputation"
+        parameters:
+          applicable_types: ["numeric", "float", "integer"]
+          min_non_null_ratio: 0.5
+        priority: 1
+      
+      # Use median for numeric fields (better for skewed distributions)
+      - strategy: "median_imputation"
+        parameters:
+          applicable_types: ["numeric", "float", "integer"]
+          outlier_sensitive: true
+        priority: 2
+      
+      # Use mode (most common value) for categorical fields
+      - strategy: "mode_imputation"
+        parameters:
+          applicable_types: ["categorical", "string", "boolean"]
+        priority: 1
+      
+      # Use constants as a last resort
+      - strategy: "constant_imputation"
+        parameters:
+          applicable_types: ["any"]
+          default_values:
+            string: ""
+            numeric: 0
+            boolean: false
+            timestamp: "1970-01-01T00:00:00Z"
+        priority: 3
+
+  # Rule for handling outliers in datasets
+  - rule_id: "outlier_rule"
+    description: "Rule for handling outliers in datasets"
+    issue_type: "outliers"
+    confidence_threshold: 0.9
+    actions:
+      # Winsorization: cap extreme values at specified percentiles
+      - strategy: "winsorization"
+        parameters:
+          limits: [0.05, 0.05]  # 5th and 95th percentiles
+          applicable_types: ["numeric", "float", "integer"]
+        priority: 1
+      
+      # IQR-based filtering: identify outliers using interquartile range
+      - strategy: "iqr_filtering"
+        parameters:
+          factor: 1.5  # Values > Q3 + factor*IQR or < Q1 - factor*IQR are outliers
+          applicable_types: ["numeric", "float", "integer"]
+        priority: 2
+      
+      # Z-score filtering: identify outliers using standard deviations
+      - strategy: "z_score_filtering"
+        parameters:
+          threshold: 3.0  # Values > mean + threshold*std or < mean - threshold*std are outliers
+          applicable_types: ["numeric", "float", "integer"]
+        priority: 3
+
+  # Rule for handling format errors in datasets
+  - rule_id: "format_error_rule"
+    description: "Rule for handling format errors in datasets"
+    issue_type: "format_errors"
+    confidence_threshold: 0.85
+    actions:
+      # Date format correction
+      - strategy: "date_format_correction"
+        parameters:
+          input_formats: ["%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%Y/%m/%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]
+          output_format: "%Y-%m-%d"
+          applicable_types: ["string", "timestamp"]
+        priority: 1
+      
+      # Number format correction
+      - strategy: "number_format_correction"
+        parameters:
+          thousands_separator: ","
+          decimal_separator: "."
+          applicable_types: ["string"]
+        priority: 1
+      
+      # String format correction
+      - strategy: "string_format_correction"
+        parameters:
+          trim_whitespace: true
+          case: "preserve"
+          applicable_types: ["string"]
+        priority: 1
+      
+      # Type conversion
+      - strategy: "type_conversion"
+        parameters:
+          conversions:
+            to_numeric: ["string"]
+            to_timestamp: ["string"]
+            to_boolean: ["string", "numeric"]
+        priority: 2
+
+  # Rule for handling schema drift issues
+  - rule_id: "schema_drift_rule"
+    description: "Rule for handling schema drift issues"
+    issue_type: "schema_drift"
+    confidence_threshold: 0.95
+    actions:
+      # Column mapping using fuzzy matching
+      - strategy: "column_mapping"
+        parameters:
+          fuzzy_match_threshold: 0.8
+          case_sensitive: false
+        priority: 1
+      
+      # Type casting for compatible types
+      - strategy: "type_casting"
+        parameters:
+          allow_safe_casts: true
+          strict_mode: false
+        priority: 2
+      
+      # Add missing columns with default values
+      - strategy: "default_values"
+        parameters:
+          add_missing_columns: true
+          default_values:
+            string: ""
+            numeric: 0
+            boolean: false
+            timestamp: "1970-01-01T00:00:00Z"
+        priority: 3
+
+  # Rule for handling resource exhaustion issues
+  - rule_id: "resource_exhaustion_rule"
+    description: "Rule for handling resource exhaustion issues"
+    issue_type: "resource_exhaustion"
+    confidence_threshold: 0.85
+    actions:
+      # Increase memory allocation
+      - strategy: "increase_memory"
+        parameters:
+          increment_factor: 1.5
+          max_memory_gb: 16
+        priority: 1
+      
+      # Increase CPU allocation
+      - strategy: "increase_cpu"
+        parameters:
+          increment_factor: 1.5
+          max_cpu_count: 8
+        priority: 2
+      
+      # Increase BigQuery slots
+      - strategy: "increase_slots"
+        parameters:
+          increment_factor: 2.0
+          max_slots: 2000
+        priority: 3
+
+  # Rule for handling timeout issues
+  - rule_id: "timeout_rule"
+    description: "Rule for handling timeout issues"
+    issue_type: "timeout"
+    confidence_threshold: 0.8
+    actions:
+      # Increase timeout duration
+      - strategy: "increase_timeout"
+        parameters:
+          increment_factor: 2.0
+          max_timeout_minutes: 120
+        priority: 1
+      
+      # Reduce batch size to process data in smaller chunks
+      - strategy: "batch_processing"
+        parameters:
+          batch_size_reduction_factor: 0.5
+          min_batch_size: 100
+        priority: 2
+
+  # Rule for handling dependency failures
+  - rule_id: "dependency_failure_rule"
+    description: "Rule for handling dependency failures"
+    issue_type: "dependency_failure"
+    confidence_threshold: 0.9
+    actions:
+      # Retry the dependency with exponential backoff
+      - strategy: "retry_dependency"
+        parameters:
+          max_retries: 3
+          backoff_factor: 2.0
+          initial_delay_seconds: 60
+        priority: 1
+      
+      # Use alternative dependency source
+      - strategy: "alternative_dependency"
+        parameters:
+          fallback_sources:
+            primary_source: "backup_source"
+        priority: 2
+
+  # Rule for handling configuration errors
+  - rule_id: "configuration_error_rule"
+    description: "Rule for handling configuration errors"
+    issue_type: "configuration_error"
+    confidence_threshold: 0.85
+    actions:
+      # Revert to default configuration
+      - strategy: "default_configuration"
+        parameters:
+          use_defaults: true
+          preserve_custom_settings: false
+        priority: 1
+      
+      # Adjust specific configuration parameters
+      - strategy: "configuration_adjustment"
+        parameters:
+          adjustments:
+            batch_size: "reduce_by_half"
+            parallelism: "reduce_by_half"
+            memory_buffer: "increase_by_half"
+        priority: 2
+
+# -------------------------------------------------------------------------
+# Rule Sets
+# -------------------------------------------------------------------------
+# Groupings of rules for different operational contexts
+# -------------------------------------------------------------------------
+rule_sets:
+  # Rules for data quality issues
+  data_quality:
+    - "missing_values_rule"
+    - "outlier_rule"
+    - "format_error_rule"
+    - "schema_drift_rule"
+  
+  # Rules for pipeline execution issues
+  pipeline_execution:
+    - "resource_exhaustion_rule"
+    - "timeout_rule"
+    - "dependency_failure_rule"
+    - "configuration_error_rule"
+  
+  # Rules for critical data that requires special handling
+  critical_data:
+    - "missing_values_rule"
+    - "format_error_rule"
+  
+  # Rules focused on performance optimization
+  performance_optimization:
+    - "resource_exhaustion_rule"
+    - "timeout_rule"
+
+# -------------------------------------------------------------------------
+# Severity Thresholds
+# -------------------------------------------------------------------------
+# Confidence and approval thresholds based on issue severity
+# -------------------------------------------------------------------------
+severity_thresholds:
+  # Critical severity: highest confidence required, always needs approval
+  critical:
+    confidence_threshold: 0.95
+    approval_required: "always"
+    max_retry_attempts: 1
+  
+  # High severity: high confidence required, approval for high-impact changes
+  high:
+    confidence_threshold: 0.9
+    approval_required: "high_impact_only"
+    max_retry_attempts: 2
+  
+  # Medium severity: moderate confidence required
+  medium:
+    confidence_threshold: 0.85
+    approval_required: "high_impact_only"
+    max_retry_attempts: 3
+  
+  # Low severity: lower confidence acceptable, no approval needed
+  low:
+    confidence_threshold: 0.75
+    approval_required: "never"
+    max_retry_attempts: 3
