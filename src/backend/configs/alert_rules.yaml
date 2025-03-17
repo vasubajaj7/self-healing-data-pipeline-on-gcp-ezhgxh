@@ -1,0 +1,637 @@
+version: '1.0'
+description: 'Alert rules configuration for the self-healing data pipeline'
+
+# Rule groups organized by category
+rule_groups:
+  - name: pipeline_health
+    description: 'Rules for monitoring overall pipeline health and execution status'
+    rules:
+      - id: pipeline_failure_rate
+        name: 'Pipeline Failure Rate High'
+        description: 'Alert when pipeline failure rate exceeds threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: pipeline_failure_rate
+          operator: '>'
+          threshold: 0.1
+          lookback_period_hours: 24
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+              - teams.operations
+            message: 'Pipeline failure rate has exceeded 10% in the last 24 hours'
+          self_healing:
+            enabled: true
+            action_type: ANALYSIS
+            confidence_threshold: 0.8
+        enabled: true
+      
+      - id: pipeline_execution_time
+        name: 'Pipeline Execution Time Anomaly'
+        description: 'Alert when pipeline execution time shows anomalous behavior'
+        rule_type: ANOMALY
+        conditions:
+          metric_path: pipeline_execution_time
+          anomaly_detection:
+            method: z_score
+            threshold: 3.0
+            lookback_period_hours: 168
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'Pipeline execution time shows anomalous behavior'
+          self_healing:
+            enabled: true
+            action_type: RESOURCE_OPTIMIZATION
+            confidence_threshold: 0.7
+        enabled: true
+      
+      - id: task_failure_count
+        name: 'Critical Task Failures'
+        description: 'Alert when critical tasks fail'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: task_failure_count
+          operator: '>='
+          threshold: 1
+          lookback_period_hours: 1
+          filters:
+            task_type: critical
+        severity: CRITICAL
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+              - email.critical
+            message: 'Critical task failure detected'
+          self_healing:
+            enabled: true
+            action_type: PIPELINE_RETRY
+            confidence_threshold: 0.9
+        enabled: true
+      
+      - id: pending_tasks_high
+        name: 'High Pending Tasks'
+        description: 'Alert when number of pending tasks is unusually high'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: pending_tasks_count
+          operator: '>'
+          threshold: 50
+          lookback_period_hours: 1
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'High number of pending tasks detected'
+          self_healing:
+            enabled: true
+            action_type: RESOURCE_SCALING
+            confidence_threshold: 0.8
+        enabled: true
+
+  - name: data_quality
+    description: 'Rules for monitoring data quality metrics and validation results'
+    rules:
+      - id: quality_score_low
+        name: 'Data Quality Score Low'
+        description: 'Alert when data quality score falls below threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: data_quality_score
+          operator: '<'
+          threshold: 0.9
+          lookback_period_hours: 24
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+              - teams.data_quality
+            message: 'Data quality score has fallen below 90%'
+          self_healing:
+            enabled: true
+            action_type: DATA_CORRECTION
+            confidence_threshold: 0.85
+        enabled: true
+      
+      - id: schema_validation_failures
+        name: 'Schema Validation Failures'
+        description: 'Alert when schema validation failures occur'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: schema_validation_failure_count
+          operator: '>'
+          threshold: 0
+          lookback_period_hours: 24
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+              - teams.data_quality
+            message: 'Schema validation failures detected'
+          self_healing:
+            enabled: true
+            action_type: SCHEMA_EVOLUTION
+            confidence_threshold: 0.7
+        enabled: true
+      
+      - id: null_value_rate_high
+        name: 'High Null Value Rate'
+        description: 'Alert when null value rate exceeds threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: null_value_rate
+          operator: '>'
+          threshold: 0.05
+          lookback_period_hours: 24
+          filters:
+            column_type: required
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_quality
+            message: 'High null value rate detected in required columns'
+          self_healing:
+            enabled: true
+            action_type: DATA_CORRECTION
+            confidence_threshold: 0.8
+        enabled: true
+      
+      - id: data_anomalies_detected
+        name: 'Data Anomalies Detected'
+        description: 'Alert when statistical anomalies are detected in data'
+        rule_type: ANOMALY
+        conditions:
+          metric_path: data_anomaly_score
+          anomaly_detection:
+            method: isolation_forest
+            threshold: 0.8
+            lookback_period_hours: 168
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_quality
+            message: 'Statistical anomalies detected in data'
+          self_healing:
+            enabled: true
+            action_type: DATA_CORRECTION
+            confidence_threshold: 0.75
+        enabled: true
+
+  - name: self_healing
+    description: 'Rules for monitoring self-healing system effectiveness'
+    rules:
+      - id: healing_success_rate_low
+        name: 'Self-Healing Success Rate Low'
+        description: 'Alert when self-healing success rate falls below threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: auto_fix_success_rate
+          operator: '<'
+          threshold: 0.8
+          lookback_period_hours: 168
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'Self-healing success rate has fallen below 80%'
+          self_healing:
+            enabled: false
+        enabled: true
+      
+      - id: manual_intervention_high
+        name: 'High Manual Intervention Rate'
+        description: 'Alert when manual intervention rate is high'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: manual_intervention_count
+          operator: '>'
+          threshold: 5
+          lookback_period_hours: 24
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'High rate of manual interventions required'
+          self_healing:
+            enabled: false
+        enabled: true
+      
+      - id: healing_response_time_high
+        name: 'Slow Healing Response Time'
+        description: 'Alert when self-healing response time is too high'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: healing_response_time
+          operator: '>'
+          threshold: 300
+          lookback_period_hours: 24
+        severity: LOW
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'Self-healing response time exceeds 5 minutes'
+          self_healing:
+            enabled: false
+        enabled: true
+
+  - name: resource_utilization
+    description: 'Rules for monitoring resource utilization and performance'
+    rules:
+      - id: bigquery_slots_high
+        name: 'High BigQuery Slot Utilization'
+        description: 'Alert when BigQuery slot utilization is high'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: bigquery_slots_usage
+          operator: '>'
+          threshold: 0.85
+          lookback_period_hours: 1
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+            message: 'BigQuery slot utilization exceeds 85%'
+          self_healing:
+            enabled: true
+            action_type: RESOURCE_SCALING
+            confidence_threshold: 0.9
+        enabled: true
+      
+      - id: composer_worker_utilization
+        name: 'High Composer Worker Utilization'
+        description: 'Alert when Composer worker utilization is high'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: composer_worker_utilization
+          operator: '>'
+          threshold: 0.9
+          lookback_period_hours: 1
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+            message: 'Composer worker utilization exceeds 90%'
+          self_healing:
+            enabled: true
+            action_type: RESOURCE_SCALING
+            confidence_threshold: 0.9
+        enabled: true
+      
+      - id: storage_utilization_high
+        name: 'High Storage Utilization'
+        description: 'Alert when storage utilization exceeds threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: storage_utilization
+          operator: '>'
+          threshold: 0.9
+          lookback_period_hours: 24
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+            message: 'Storage utilization exceeds 90%'
+          self_healing:
+            enabled: true
+            action_type: RESOURCE_OPTIMIZATION
+            confidence_threshold: 0.8
+        enabled: true
+      
+      - id: query_performance_degradation
+        name: 'Query Performance Degradation'
+        description: 'Alert when query performance degrades significantly'
+        rule_type: TREND
+        conditions:
+          metric_path: query_execution_time
+          trend_direction: increasing
+          threshold: 0.5
+          lookback_period_hours: 168
+        severity: LOW
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+            message: 'Query performance has degraded by more than 50%'
+          self_healing:
+            enabled: true
+            action_type: QUERY_OPTIMIZATION
+            confidence_threshold: 0.7
+        enabled: true
+
+  - name: external_dependencies
+    description: 'Rules for monitoring external dependencies and integrations'
+    rules:
+      - id: api_response_time
+        name: 'API Response Time High'
+        description: 'Alert when API response time exceeds threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: api_response_time
+          operator: '>'
+          threshold: 2000
+          lookback_period_hours: 1
+        severity: MEDIUM
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+            message: 'API response time exceeds 2 seconds'
+          self_healing:
+            enabled: true
+            action_type: DEPENDENCY_RESOLUTION
+            confidence_threshold: 0.7
+        enabled: true
+      
+      - id: api_error_rate
+        name: 'API Error Rate High'
+        description: 'Alert when API error rate exceeds threshold'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: api_error_rate
+          operator: '>'
+          threshold: 0.05
+          lookback_period_hours: 1
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+              - teams.data_engineering
+            message: 'API error rate exceeds 5%'
+          self_healing:
+            enabled: true
+            action_type: DEPENDENCY_RESOLUTION
+            confidence_threshold: 0.8
+        enabled: true
+      
+      - id: source_data_availability
+        name: 'Source Data Availability Issue'
+        description: 'Alert when source data is not available as expected'
+        rule_type: EVENT
+        conditions:
+          event_type: data_availability
+          event_source: ingestion
+          properties:
+            status: unavailable
+            duration_minutes:
+              operator: '>'
+              value: 30
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.data_engineering
+              - teams.operations
+            message: 'Source data unavailable for more than 30 minutes'
+          self_healing:
+            enabled: true
+            action_type: DEPENDENCY_RESOLUTION
+            confidence_threshold: 0.7
+        enabled: true
+
+  - name: security_and_compliance
+    description: 'Rules for monitoring security and compliance aspects'
+    rules:
+      - id: unauthorized_access_attempts
+        name: 'Unauthorized Access Attempts'
+        description: 'Alert when unauthorized access attempts are detected'
+        rule_type: THRESHOLD
+        conditions:
+          metric_path: unauthorized_access_count
+          operator: '>'
+          threshold: 5
+          lookback_period_hours: 1
+        severity: CRITICAL
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+              - email.security
+            message: 'Multiple unauthorized access attempts detected'
+          self_healing:
+            enabled: false
+        enabled: true
+      
+      - id: data_access_pattern_anomaly
+        name: 'Anomalous Data Access Pattern'
+        description: 'Alert when anomalous data access patterns are detected'
+        rule_type: ANOMALY
+        conditions:
+          metric_path: data_access_pattern
+          anomaly_detection:
+            method: isolation_forest
+            threshold: 0.9
+            lookback_period_hours: 168
+        severity: HIGH
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+              - email.security
+            message: 'Anomalous data access pattern detected'
+          self_healing:
+            enabled: false
+        enabled: true
+      
+      - id: sensitive_data_exposure
+        name: 'Sensitive Data Exposure'
+        description: 'Alert when sensitive data exposure is detected'
+        rule_type: EVENT
+        conditions:
+          event_type: data_exposure
+          event_source: dlp
+          properties:
+            sensitivity:
+              operator: '=='
+              value: high
+        severity: CRITICAL
+        actions:
+          notification:
+            channels: 
+              - teams.operations
+              - email.security
+              - email.compliance
+            message: 'Sensitive data exposure detected'
+          self_healing:
+            enabled: false
+        enabled: true
+
+# Compound rules that combine other rules
+compound_rules:
+  - id: pipeline_health_critical
+    name: 'Critical Pipeline Health Issues'
+    description: 'Compound rule for detecting critical pipeline health issues'
+    rule_type: COMPOUND
+    conditions:
+      operator: OR
+      rules:
+        - pipeline_failure_rate
+        - task_failure_count
+    severity: CRITICAL
+    actions:
+      notification:
+        channels: 
+          - teams.operations
+          - email.critical
+        message: 'Critical pipeline health issues detected'
+      self_healing:
+        enabled: true
+        action_type: ANALYSIS
+        confidence_threshold: 0.9
+    enabled: true
+  
+  - id: data_quality_critical
+    name: 'Critical Data Quality Issues'
+    description: 'Compound rule for detecting critical data quality issues'
+    rule_type: COMPOUND
+    conditions:
+      operator: OR
+      rules:
+        - quality_score_low
+        - schema_validation_failures
+    severity: HIGH
+    actions:
+      notification:
+        channels: 
+          - teams.data_engineering
+          - teams.data_quality
+        message: 'Critical data quality issues detected'
+      self_healing:
+        enabled: true
+        action_type: DATA_CORRECTION
+        confidence_threshold: 0.85
+    enabled: true
+  
+  - id: resource_constraint
+    name: 'Resource Constraint Detected'
+    description: 'Compound rule for detecting resource constraints'
+    rule_type: COMPOUND
+    conditions:
+      operator: OR
+      rules:
+        - bigquery_slots_high
+        - composer_worker_utilization
+        - storage_utilization_high
+    severity: HIGH
+    actions:
+      notification:
+        channels: 
+          - teams.operations
+        message: 'Resource constraints detected in the pipeline'
+      self_healing:
+        enabled: true
+        action_type: RESOURCE_SCALING
+        confidence_threshold: 0.9
+    enabled: true
+
+# Notification templates for different alert types
+notification_templates:
+  default:
+    title: '{{severity}}: {{name}}'
+    message: '{{description}}'
+    include_details: true
+    include_metrics: true
+    include_actions: true
+  
+  pipeline_failure:
+    title: 'Pipeline Failure: {{context.pipeline_name}}'
+    message: 'Execution {{context.execution_id}} failed with error: {{context.error_message}}'
+    include_details: true
+    include_metrics: true
+    include_actions: true
+  
+  data_quality:
+    title: 'Data Quality Issue: {{name}}'
+    message: 'Data quality issue detected: {{description}}'
+    include_details: true
+    include_metrics: true
+    include_actions: true
+  
+  resource_utilization:
+    title: 'Resource Alert: {{name}}'
+    message: 'Resource utilization issue: {{description}}'
+    include_details: true
+    include_metrics: true
+    include_actions: true
+
+# Self-healing action definitions
+self_healing_actions:
+  ANALYSIS:
+    description: 'Analyze the issue and recommend solutions'
+    implementation: analyze_issue
+    parameters:
+      analysis_depth: comprehensive
+      include_historical_context: true
+  
+  PIPELINE_RETRY:
+    description: 'Retry failed pipeline with optimized parameters'
+    implementation: retry_pipeline
+    parameters:
+      max_retries: 3
+      backoff_factor: 2
+      parameter_optimization: true
+  
+  DATA_CORRECTION:
+    description: 'Apply data corrections based on detected issues'
+    implementation: correct_data
+    parameters:
+      correction_strategies:
+        - imputation
+        - filtering
+        - transformation
+      validation_required: true
+  
+  RESOURCE_SCALING:
+    description: 'Scale resources to address constraints'
+    implementation: scale_resources
+    parameters:
+      scaling_factor: 1.5
+      max_scaling_factor: 3.0
+      cooldown_period_minutes: 30
+  
+  RESOURCE_OPTIMIZATION:
+    description: 'Optimize resource usage without scaling'
+    implementation: optimize_resources
+    parameters:
+      optimization_target: efficiency
+      apply_immediately: true
+  
+  QUERY_OPTIMIZATION:
+    description: 'Optimize BigQuery queries for better performance'
+    implementation: optimize_queries
+    parameters:
+      optimization_level: aggressive
+      apply_immediately: true
+  
+  SCHEMA_EVOLUTION:
+    description: 'Evolve schema to accommodate changes'
+    implementation: evolve_schema
+    parameters:
+      compatibility_mode: backward
+      validation_required: true
+  
+  DEPENDENCY_RESOLUTION:
+    description: 'Resolve issues with external dependencies'
+    implementation: resolve_dependency
+    parameters:
+      resolution_strategies:
+        - retry
+        - fallback
+        - circuit_breaker
+      max_resolution_attempts: 3
