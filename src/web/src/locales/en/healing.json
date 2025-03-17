@@ -1,0 +1,209 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Row, Col, Card, Button, Typography, Spin, Alert, Tabs, Tooltip } from 'antd';
+import { SyncOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import MetricsOverview from './components/MetricsOverview';
+import HealthStatusCards from './components/HealthStatusCards';
+import PerformanceCharts from './components/PerformanceCharts';
+import SystemStatusPanel from './components/SystemStatusPanel';
+import QuickStatsPanel from './components/QuickStatsPanel';
+import RecentExecutionsTable from './components/RecentExecutionsTable';
+import ActiveIssuesTable from './components/ActiveIssuesTable';
+import RecentActionsTable from './components/RecentActionsTable';
+import AIInsightsList from './components/AIInsightsList';
+import { fetchDashboardData } from '../api/dashboardApi';
+import './SelfHealingDashboard.css';
+
+const { Title, Text } = Typography;
+const { TabPane } = Tabs;
+
+/**
+ * Self-Healing Dashboard Component
+ * 
+ * Displays comprehensive monitoring information for the self-healing data pipeline,
+ * including pipeline health, data quality metrics, AI-driven insights, and recent activities.
+ */
+const SelfHealingDashboard: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  /**
+   * Fetches dashboard data from the API
+   */
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const data = await fetchDashboardData();
+      setDashboardData(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+      console.error('Dashboard data loading error:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadDashboardData();
+    
+    // Set up auto-refresh interval (every 5 minutes)
+    const refreshInterval = setInterval(() => {
+      loadDashboardData();
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(refreshInterval);
+  }, [loadDashboardData]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="dashboard-loading">
+        <Spin size="large" />
+        <p>Loading dashboard data...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Alert
+        message="Error Loading Dashboard"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button onClick={loadDashboardData} type="primary">
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
+
+  // No data state
+  if (!dashboardData) {
+    return (
+      <Alert
+        message="No Dashboard Data Available"
+        description="Unable to retrieve dashboard information. Please try again."
+        type="warning"
+        showIcon
+        action={
+          <Button onClick={loadDashboardData} type="primary">
+            Refresh
+          </Button>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="self-healing-dashboard">
+      {/* Dashboard Header */}
+      <div className="dashboard-header">
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Title level={2}>{dashboardData.dashboard.title}</Title>
+            <Text type="secondary">{dashboardData.dashboard.subtitle}</Text>
+          </Col>
+          <Col>
+            <Button 
+              type="primary" 
+              icon={<SyncOutlined spin={refreshing} />} 
+              onClick={loadDashboardData}
+              loading={refreshing}
+              disabled={refreshing}
+            >
+              {dashboardData.dashboard.refresh}
+            </Button>
+          </Col>
+        </Row>
+        <Row className="dashboard-summary">
+          <Col span={24}>
+            <Card title={dashboardData.dashboard.summary}>
+              <MetricsOverview metrics={dashboardData.dashboard.metrics} data={dashboardData.metrics} />
+            </Card>
+          </Col>
+        </Row>
+      </div>
+
+      {/* Health Status Section */}
+      <Row gutter={[16, 16]} className="health-status-section">
+        <HealthStatusCards 
+          cards={dashboardData.dashboard.cards} 
+          status={dashboardData.dashboard.status}
+          data={dashboardData.health} 
+        />
+      </Row>
+
+      {/* Performance Charts */}
+      <PerformanceCharts 
+        charts={dashboardData.dashboard.charts}
+        chartData={dashboardData.charts}
+      />
+
+      {/* System Status and Quick Stats */}
+      <Row gutter={[16, 16]} className="stats-section">
+        <Col xs={24} md={12}>
+          <QuickStatsPanel 
+            title={dashboardData.dashboard.cards.quickStats}
+            stats={dashboardData.quickStats}
+          />
+        </Col>
+        <Col xs={24} md={12}>
+          <SystemStatusPanel 
+            title={dashboardData.dashboard.cards.systemStatus}
+            components={dashboardData.systemStatus}
+          />
+        </Col>
+      </Row>
+
+      {/* Recent Activities and Issues */}
+      <Row gutter={[16, 16]} className="activities-section">
+        <Col span={24}>
+          <Card 
+            title="Recent Activities" 
+            extra={
+              <Tooltip title="Shows recent pipeline executions, AI insights, issues, and healing actions">
+                <InfoCircleOutlined />
+              </Tooltip>
+            }
+          >
+            <Tabs defaultActiveKey="executions">
+              <TabPane tab="Recent Executions" key="executions">
+                <RecentExecutionsTable 
+                  executions={dashboardData.recentExecutions}
+                  columns={dashboardData.tableColumns.executions}
+                />
+              </TabPane>
+              <TabPane tab="AI Insights" key="insights">
+                <AIInsightsList insights={dashboardData.aiInsights} />
+              </TabPane>
+              <TabPane tab={`Active Issues (${dashboardData.activeIssues.length})`} key="issues">
+                <ActiveIssuesTable 
+                  issues={dashboardData.activeIssues}
+                  columns={dashboardData.tableColumns.issues}
+                  noIssuesText={dashboardData.dashboard.tables.noActiveIssues}
+                />
+              </TabPane>
+              <TabPane tab="Recent Actions" key="actions">
+                <RecentActionsTable 
+                  actions={dashboardData.recentActions}
+                  columns={dashboardData.tableColumns.actions}
+                  noActionsText={dashboardData.dashboard.tables.noRecentActions}
+                />
+              </TabPane>
+            </Tabs>
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+};
+
+export default SelfHealingDashboard;
