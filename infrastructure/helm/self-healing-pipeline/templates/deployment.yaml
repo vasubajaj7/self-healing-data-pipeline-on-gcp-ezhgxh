@@ -1,0 +1,254 @@
+{{- if .Values.backend.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-backend
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: backend
+  annotations:
+    description: "Backend services for the self-healing data pipeline"
+    {{- with .Values.backend.podAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "self-healing-pipeline.selectorLabels" . | nindent 6 }}
+      component: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 30
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        {{- include "self-healing-pipeline.selectorLabels" . | nindent 8 }}
+        component: backend
+      annotations:
+        {{- with .Values.backend.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "self-healing-pipeline.serviceAccountName" . }}
+      containers:
+        - name: backend
+          image: "{{ .Values.global.image.registry }}/{{ .Values.backend.image.repository }}:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.port }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.backend.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.pipeline.logLevel }}
+            - name: GCP_PROJECT_ID
+              value: {{ .Values.global.project.id }}
+            - name: GCP_REGION
+              value: {{ .Values.global.project.region }}
+            - name: BIGQUERY_DATASET
+              value: {{ .Values.config.pipeline.bigqueryDataset }}
+            - name: GCS_BUCKET
+              value: {{ .Values.config.pipeline.gcsBucket }}
+            - name: ENABLE_METRICS
+              value: "{{ .Values.config.pipeline.enableMetrics }}"
+            - name: ENABLE_TRACING
+              value: "{{ .Values.config.pipeline.enableTracing }}"
+            - name: MAX_RETRY_ATTEMPTS
+              value: "{{ .Values.config.healing.maxRetryAttempts }}"
+            {{- if .Values.config.secrets.databaseCredentials.create }}
+            - name: CLOUDSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "self-healing-pipeline.fullname" . }}-db-credentials
+                  key: CLOUDSQL_USER
+            - name: CLOUDSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "self-healing-pipeline.fullname" . }}-db-credentials
+                  key: CLOUDSQL_PASSWORD
+            - name: CLOUDSQL_CONNECTION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "self-healing-pipeline.fullname" . }}-db-credentials
+                  key: CLOUDSQL_CONNECTION_NAME
+            {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.config.secrets.databaseCredentials.create }}
+            - name: google-cloud-key
+              mountPath: /var/secrets/google
+              readOnly: true
+            {{- end }}
+            - name: config-volume
+              mountPath: /etc/config
+              readOnly: true
+            - name: quality-config-volume
+              mountPath: /etc/quality-config
+              readOnly: true
+            - name: healing-config-volume
+              mountPath: /etc/healing-config
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.backend.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.backend.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.readinessProbe.failureThreshold }}
+          {{- if .Values.backend.startupProbe }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.backend.startupProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.backend.startupProbe.failureThreshold }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.security.containerSecurityContext | nindent 12 }}
+      volumes:
+        {{- if .Values.config.secrets.databaseCredentials.create }}
+        - name: google-cloud-key
+          secret:
+            secretName: {{ include "self-healing-pipeline.fullname" . }}-gcp-sa
+        {{- end }}
+        - name: config-volume
+          configMap:
+            name: {{ include "self-healing-pipeline.fullname" . }}-config
+        - name: quality-config-volume
+          configMap:
+            name: {{ include "self-healing-pipeline.fullname" . }}-quality-config
+        - name: healing-config-volume
+          configMap:
+            name: {{ include "self-healing-pipeline.fullname" . }}-healing-config
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- toYaml .Values.security.podSecurityContext | nindent 8 }}
+{{- end }}
+
+{{- if .Values.web.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "self-healing-pipeline.fullname" . }}-web
+  labels:
+    {{- include "self-healing-pipeline.labels" . | nindent 4 }}
+    component: web
+  annotations:
+    description: "Web UI for the self-healing data pipeline"
+    {{- with .Values.web.podAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "self-healing-pipeline.selectorLabels" . | nindent 6 }}
+      component: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  minReadySeconds: 20
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        {{- include "self-healing-pipeline.selectorLabels" . | nindent 8 }}
+        component: web
+      annotations:
+        {{- with .Values.web.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "self-healing-pipeline.serviceAccountName" . }}
+      containers:
+        - name: web
+          image: "{{ .Values.global.image.registry }}/{{ .Values.web.image.repository }}:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.service.port }}
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+            - name: API_URL
+              value: "http://{{ include "self-healing-pipeline.fullname" . }}-backend:{{ .Values.backend.service.port }}"
+            - name: LOG_LEVEL
+              value: {{ .Values.config.pipeline.logLevel }}
+            - name: ENABLE_METRICS
+              value: "{{ .Values.config.pipeline.enableMetrics }}"
+            - name: ENABLE_TRACING
+              value: "{{ .Values.config.pipeline.enableTracing }}"
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.web.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.web.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.web.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.web.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.web.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.web.readinessProbe.failureThreshold }}
+          securityContext:
+            {{- toYaml .Values.security.containerSecurityContext | nindent 12 }}
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        {{- toYaml .Values.security.podSecurityContext | nindent 8 }}
+{{- end }}
