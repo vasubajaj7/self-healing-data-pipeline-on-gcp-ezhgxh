@@ -1,0 +1,50 @@
+# Default owners for everything in the repo
+* @data-engineering-leads
+
+# Backend core components
+/src/backend/ingestion/ @data-ingestion-team @data-engineering-leads
+/src/backend/quality/ @data-quality-team @data-engineering-leads
+/src/backend/self_healing/ @ai-ml-team @data-engineering-leads
+/src/backend/monitoring/ @monitoring-team @data-engineering-leads
+/src/backend/optimization/ @performance-team @data-engineering-leads
+/src/backend/api/ @api-team @data-engineering-leads
+/src/backend/airflow/ @orchestration-team @data-engineering-leads
+/src/backend/utils/ @platform-team @data-engineering-leads
+/src/backend/db/ @data-team @data-engineering-leads
+/src/backend/configs/ @platform-team @data-engineering-leads
+
+# Frontend components
+/src/web/ @frontend-team @ui-leads
+
+# Infrastructure code
+/infrastructure/ @devops-team @platform-team
+/src/backend/terraform/ @devops-team @platform-team
+
+# CI/CD and GitHub workflows
+/.github/ @devops-team @platform-team
+
+# Testing framework
+/src/test/ @qa-team @data-engineering-leads
+
+# Documentation
+/docs/ @technical-writers @data-engineering-leads
+
+# Critical security and configuration files
+*.tf @devops-team @security-team
+*.yaml @platform-team @devops-team
+*.json @platform-team @devops-team
+
+# Security-sensitive areas
+/src/backend/utils/auth/ @security-team @data-engineering-leads
+/src/backend/api/middleware/auth_middleware.py @security-team @api-team
+/src/web/src/utils/auth.ts @security-team @frontend-team
+/src/web/src/hooks/useAuth.ts @security-team @frontend-team
+
+# Deployment and build scripts
+*.sh @devops-team
+/src/backend/scripts/ @devops-team @platform-team
+
+# Package dependencies
+**/requirements.txt @platform-team @security-team
+**/package.json @platform-team @security-team
+**/pyproject.toml @platform-team @security-team
