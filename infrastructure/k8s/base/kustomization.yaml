@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - service-accounts.yaml
+  - rbac.yaml
+  - configmaps.yaml
+  - secrets.yaml
+commonLabels:
+  app: self-healing-pipeline
+  managed-by: kustomize
+  part-of: data-platform
+commonAnnotations:
+  description: Self-healing data pipeline for BigQuery using Google Cloud services
+  documentation: https://github.com/organization/self-healing-pipeline/docs
