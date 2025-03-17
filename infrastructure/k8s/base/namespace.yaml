@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: self-healing-pipeline
+  labels:
+    name: self-healing-pipeline
+    app: self-healing-pipeline
+    part-of: data-platform
+    managed-by: kustomize
+  annotations:
+    description: "Namespace for the self-healing data pipeline for BigQuery"
+    owner: "data-engineering-team"
