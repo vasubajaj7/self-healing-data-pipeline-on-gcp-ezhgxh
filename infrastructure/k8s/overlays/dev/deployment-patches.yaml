@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        env:
+        - name: ENVIRONMENT
+          value: development
+        - name: LOG_LEVEL
+          value: debug
+        - name: ENABLE_PROFILING
+          value: "true"
+        - name: ENABLE_DEBUG_TOOLS
+          value: "true"
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        - name: config-volume
+          mountPath: /etc/config
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: dev-credentials
+      - name: config-volume
+        configMap:
+          name: pipeline-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: web
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        env:
+        - name: ENVIRONMENT
+          value: development
+        - name: API_URL
+          value: http://backend-service:8080
+        - name: ENABLE_MOCK_DATA
+          value: "true"
+        - name: ENABLE_DEBUG_TOOLS
+          value: "true"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
