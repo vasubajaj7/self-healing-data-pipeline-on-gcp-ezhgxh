@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ./configs.yaml
+  - ./ingress.yaml
+
+components: []
+
+patches:
+  - ./deployment-patches.yaml
+
+namespace: self-healing-pipeline-dev
+
+commonLabels:
+  environment: development
+  tier: dev
+
+configMapGenerator:
+  - name: pipeline-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=debug
+      - GCP_PROJECT_ID=self-healing-pipeline-dev
+      - GCP_REGION=us-central1
+      - BIGQUERY_DATASET=pipeline_data_dev
+      - GCS_BUCKET=self-healing-pipeline-dev-data
+      - ENABLE_METRICS=true
+      - ENABLE_TRACING=true
+      - ENABLE_PROFILING=true
+  - name: feature-flags
+    behavior: create
+    literals:
+      - ENABLE_EXPERIMENTAL_FEATURES=true
+      - ENABLE_DEBUG_TOOLS=true
+      - ENABLE_MOCK_DATA=true
+      - ENABLE_AI_PLAYGROUND=true
+
+secretGenerator:
+  - name: dev-credentials
+    files:
+      - key.json=secrets/dev-service-account-key.json
+  - name: database-credentials
+    behavior: merge
+    literals:
+      - CLOUDSQL_USER=pipeline_dev_user
+      - CLOUDSQL_CONNECTION_NAME=self-healing-pipeline-dev:us-central1:pipeline-db-dev
+    type: Opaque
+
+replicas:
+  - name: web-deployment
+    count: 1
+
+images:
+  - name: gcr.io/${PROJECT_ID}/self-healing-pipeline/backend
+    newName: gcr.io/self-healing-pipeline-dev/self-healing-pipeline/backend
+    newTag: latest
+  - name: gcr.io/${PROJECT_ID}/self-healing-pipeline/web
+    newName: gcr.io/self-healing-pipeline-dev/self-healing-pipeline/web
+    newTag: latest
