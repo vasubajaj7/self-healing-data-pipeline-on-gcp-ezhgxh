@@ -1,0 +1,43 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "viewportWidth": 1280,
+  "viewportHeight": 800,
+  "defaultCommandTimeout": 10000,
+  "requestTimeout": 15000,
+  "responseTimeout": 15000,
+  "pageLoadTimeout": 30000,
+  "video": false,
+  "videoUploadOnPasses": false,
+  "screenshotOnRunFailure": true,
+  "trashAssetsBeforeRuns": true,
+  "chromeWebSecurity": false,
+  "watchForFileChanges": false,
+  "retries": {
+    "runMode": 2,
+    "openMode": 0
+  },
+  "env": {
+    "apiUrl": "http://localhost:8080/api",
+    "coverage": false,
+    "codeCoverageTasksEnabled": false
+  },
+  "fixturesFolder": "cypress/fixtures",
+  "integrationFolder": "cypress/integration",
+  "supportFile": "cypress/support/index.ts",
+  "pluginsFile": "cypress/plugins/index.ts",
+  "screenshotsFolder": "../../reports/e2e/screenshots",
+  "videosFolder": "../../reports/e2e/videos",
+  "reporter": "mochawesome",
+  "reporterOptions": {
+    "reportDir": "../../reports/e2e/results",
+    "overwrite": false,
+    "html": true,
+    "json": true
+  },
+  "testFiles": "**/*.spec.ts",
+  "experimentalStudio": false,
+  "experimentalSessionAndOrigin": true,
+  "numTestsKeptInMemory": 50,
+  "includeShadowDom": true,
+  "redirectionLimit": 20
+}
