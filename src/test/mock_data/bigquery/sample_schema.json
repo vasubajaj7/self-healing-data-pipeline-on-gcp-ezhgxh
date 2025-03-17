@@ -1,0 +1,90 @@
+[
+  {
+    "name": "id",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the record"
+  },
+  {
+    "name": "name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Name of the sample record"
+  },
+  {
+    "name": "value",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Numeric value for testing"
+  },
+  {
+    "name": "timestamp",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Timestamp of record creation"
+  },
+  {
+    "name": "is_valid",
+    "type": "BOOLEAN",
+    "mode": "REQUIRED",
+    "description": "Flag indicating record validity"
+  },
+  {
+    "name": "tags",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "List of tags associated with the record"
+  },
+  {
+    "name": "metadata",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Nested metadata about the record",
+    "fields": [
+      {
+        "name": "source",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Source system that generated the record"
+      },
+      {
+        "name": "version",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Version number of the record"
+      },
+      {
+        "name": "created_by",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Creator of the record"
+      }
+    ]
+  },
+  {
+    "name": "metrics",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "description": "List of metrics associated with the record",
+    "fields": [
+      {
+        "name": "metric_name",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Name of the metric"
+      },
+      {
+        "name": "metric_value",
+        "type": "FLOAT",
+        "mode": "REQUIRED",
+        "description": "Value of the metric"
+      },
+      {
+        "name": "metric_timestamp",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Timestamp when the metric was recorded"
+      }
+    ]
+  }
+]
