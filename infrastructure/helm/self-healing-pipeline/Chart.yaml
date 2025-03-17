@@ -1,0 +1,38 @@
+apiVersion: v2
+name: self-healing-pipeline
+version: 1.0.0
+appVersion: 1.0.0
+description: A Helm chart for deploying the self-healing data pipeline for BigQuery using Google Cloud services and AI-driven automation
+type: application
+keywords:
+  - data-pipeline
+  - self-healing
+  - bigquery
+  - google-cloud
+  - ai-automation
+  - data-quality
+home: https://github.com/organization/self-healing-pipeline
+sources:
+  - https://github.com/organization/self-healing-pipeline
+maintainers:
+  - name: Data Engineering Team
+    email: data-engineering@example.com
+dependencies:
+  - name: cert-manager
+    version: ^1.11.0
+    repository: https://charts.jetstack.io
+    condition: security.certManager.enabled
+  - name: prometheus
+    version: ^19.6.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.prometheus.enabled
+  - name: grafana
+    version: ^6.52.4
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.grafana.enabled
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/changes: Initial release of the self-healing data pipeline Helm chart
+  artifacthub.io/links: '[{"name":"Documentation","url":"https://github.com/organization/self-healing-pipeline/docs"}]'
