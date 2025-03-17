@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # Backend API service
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./src/backend:/app
+      - ./secrets:/app/secrets:ro
+      - ./data:/app/data
+    environment:
+      - ENV=production
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-self-healing-pipeline}
+      - GCP_LOCATION=${GCP_LOCATION:-us-central1}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Web frontend service
+  web:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile
+      args:
+        API_URL: http://backend:8080/api
+        NODE_ENV: production
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL database
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=pipeline
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis cache and message broker
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Apache Airflow for pipeline orchestration
+  airflow:
+    image: apache/airflow:2.5.0
+    depends_on:
+      - db
+      - redis
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:postgres@db:5432/airflow
+      - AIRFLOW__CORE__FERNET_KEY=
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _AIRFLOW_DB_UPGRADE=True
+      - _AIRFLOW_WWW_USER_CREATE=True
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+    volumes:
+      - ./src/backend/airflow/dags:/opt/airflow/dags
+      - ./src/backend/airflow/plugins:/opt/airflow/plugins
+      - ./src/backend/airflow/config:/opt/airflow/config
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Worker service for background processing
+  worker:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./src/backend:/app
+      - ./secrets:/app/secrets:ro
+      - ./data:/app/data
+    environment:
+      - ENV=production
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-self-healing-pipeline}
+      - GCP_LOCATION=${GCP_LOCATION:-us-central1}
+    depends_on:
+      - backend
+      - db
+      - redis
+    command: ["python", "-m", "src.backend.worker.main"]
+    restart: unless-stopped
+
+  # BigQuery emulator for local development
+  bigquery-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "bigquery", "start", "--host-port=0.0.0.0:9050"]
+    ports:
+      - "9050:9050"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=${GCP_PROJECT_ID:-self-healing-pipeline}
+    restart: unless-stopped
+
+  # Cloud Storage emulator for local development
+  storage-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "storage", "start", "--host-port=0.0.0.0:9023"]
+    ports:
+      - "9023:9023"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=${GCP_PROJECT_ID:-self-healing-pipeline}
+    restart: unless-stopped
+
+  # Pub/Sub emulator for local development
+  pubsub-emulator:
+    image: google/cloud-sdk:latest
+    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085"]
+    ports:
+      - "8085:8085"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=${GCP_PROJECT_ID:-self-healing-pipeline}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  pipeline-network:
+    driver: bridge
