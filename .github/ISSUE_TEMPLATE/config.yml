@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Self-Healing Pipeline Documentation
+    url: https://github.com/organization/self-healing-pipeline/docs
+    about: Please check our documentation before creating an issue
+  - name: Pipeline Support Team
+    url: mailto:pipeline-support@example.com
+    about: Contact the support team for urgent production issues
+  - name: Data Engineering Community
+    url: https://teams.microsoft.com/l/channel/pipeline-community
+    about: Join our Microsoft Teams channel for discussions and questions
