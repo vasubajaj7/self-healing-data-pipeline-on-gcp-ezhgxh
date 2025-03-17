@@ -1,0 +1,107 @@
+# Data source connections configuration for the self-healing data pipeline
+# This file defines the connections to various data sources used by the pipeline
+
+sources:
+  # Google Cloud Storage data source
+  - source_id: "sales_data_gcs"
+    source_name: "Sales Data GCS Bucket"
+    source_type: "GCS"
+    description: "GCS bucket containing sales data files in CSV format"
+    enabled: true
+    connection_config:
+      project_id: "my-data-project"
+      location: "us-central1"
+      timeout: 60  # Connection timeout in seconds
+      max_retries: 5  # Maximum retry attempts
+
+  # Cloud SQL PostgreSQL database source
+  - source_id: "customer_db"
+    source_name: "Customer Database"
+    source_type: "CLOUD_SQL"
+    description: "Cloud SQL PostgreSQL database containing customer information"
+    enabled: true
+    connection_config:
+      db_type: "postgres"
+      instance_connection_name: "my-data-project:us-central1:customer-db-instance"
+      database: "customers"
+      user: "pipeline_user"
+      # Best practice: Store passwords in Secret Manager and reference them here
+      password: "secret://customer-db-password"
+      connection_args:
+        connect_timeout: 10
+        application_name: "self-healing-pipeline"
+      timeout: 30  # Connection timeout in seconds
+      query_timeout: 300  # Query execution timeout in seconds
+      max_retries: 3
+
+  # External REST API source
+  - source_id: "product_api"
+    source_name: "Product Catalog API"
+    source_type: "API"
+    description: "External REST API for product catalog data"
+    enabled: true
+    connection_config:
+      base_url: "https://api.example.com/v2"
+      auth_type: "API_KEY"  # Authentication type (API_KEY, BASIC_AUTH, OAUTH2, etc.)
+      auth_config:
+        api_key: "secret://product-api-key"
+        header_name: "X-API-Key"
+      timeout: 30  # Request timeout in seconds
+      max_retries: 5
+      verify_ssl: true  # Whether to verify SSL certificates
+      default_headers:
+        Accept: "application/json"
+        User-Agent: "SelfHealingPipeline/1.0"
+      pagination_type: "PAGE_NUMBER"  # Pagination strategy
+      pagination_config:
+        page_param: "page"  # Query parameter name for page number
+        size_param: "size"  # Query parameter name for page size
+        page_size: 100  # Number of items per page
+        max_pages: 10  # Maximum number of pages to retrieve
+      rate_limit_config:
+        requests_per_minute: 60  # Rate limit (requests per minute)
+        concurrent_requests: 5  # Maximum concurrent requests
+
+  # BigQuery dataset source
+  - source_id: "analytics_bq"
+    source_name: "Analytics BigQuery Dataset"
+    source_type: "BIGQUERY"
+    description: "BigQuery dataset containing analytics data"
+    enabled: true
+    connection_config:
+      project_id: "my-analytics-project"
+      location: "us-central1"
+      dataset: "analytics_data"  # BigQuery dataset ID
+      timeout: 600  # Query timeout in seconds
+
+  # SFTP server source
+  - source_id: "vendor_sftp"
+    source_name: "Vendor SFTP Server"
+    source_type: "SFTP"
+    description: "SFTP server for vendor data exchange"
+    enabled: true
+    connection_config:
+      host: "sftp.vendor.com"
+      port: 22
+      username: "data_exchange"
+      authentication_method: "key"  # Authentication method (password or key)
+      private_key_path: "/secrets/vendor_sftp_key"
+      private_key_passphrase: "secret://vendor-key-passphrase"
+      timeout: 60  # Connection timeout in seconds
+      max_retries: 3
+
+  # Custom source using specialized connector
+  - source_id: "custom_source"
+    source_name: "Custom Data Source"
+    source_type: "CUSTOM"
+    description: "Custom data source using specialized connector"
+    enabled: true
+    connection_config:
+      # Fully qualified name of the custom connector class
+      connector_class: "custom_connectors.specialized_connector.SpecializedConnector"
+      # Custom configuration passed to the connector
+      custom_config:
+        param1: "value1"
+        param2: 42
+        param3:
+          nested: "value"
