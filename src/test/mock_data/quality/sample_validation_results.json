@@ -1,0 +1,919 @@
+"""
+Validation Results Processor
+
+This module processes data quality validation results, analyzes quality issues,
+and coordinates with the self-healing engine to implement corrections when appropriate.
+"""
+
+import json
+import logging
+import datetime
+from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass
+
+# Google Cloud imports - v1.0.0
+from google.cloud import bigquery  # v2.34.4
+from google.cloud import storage  # v2.7.0
+
+# Import self-healing components
+from selfhealing.ai_engine import SelfHealingAIEngine
+from selfhealing.correction import CorrectionAction, CorrectionResult
+from selfhealing.models import ModelRegistry
+
+# Import monitoring components
+from monitoring.metrics import MetricsPublisher
+from monitoring.alerting import AlertManager
+from monitoring.logging_utils import setup_structured_logging
+
+# Import notification components
+from notifications.teams import TeamsNotifier
+from notifications.email import EmailNotifier
+
+# Import data quality components
+from quality.great_expectations_utils import ExpectationSuiteManager
+from quality.validation_metadata import ValidationMetadataStore
+
+# Setup logging
+logger = logging.getLogger(__name__)
+setup_structured_logging()
+
+@dataclass
+class ValidationIssue:
+    """Represents a data quality validation issue that may require healing"""
+    rule_id: str
+    rule_name: str
+    rule_type: str
+    dimension: str
+    status: str
+    details: Dict[str, Any]
+    recommendation: Optional[Dict[str, Any]] = None
+    
+    @property
+    def is_fixable(self) -> bool:
+        """Determines if this issue has a self-healing recommendation with sufficient confidence"""
+        if not self.recommendation:
+            return False
+        
+        # Get confidence threshold from config
+        threshold = CONFIG.get("self_healing", {}).get("confidence_threshold", 0.85)
+        
+        return (
+            self.recommendation.get("confidence", 0) >= threshold and
+            self.recommendation.get("action_type") is not None
+        )
+    
+    @property
+    def correction_impact(self) -> str:
+        """Returns the impact assessment for the correction action"""
+        if not self.recommendation:
+            return "No impact assessment available"
+        return self.recommendation.get("impact", "Unknown impact")
+
+
+class ValidationResult:
+    """
+    Processes and analyzes data quality validation results,
+    determining appropriate self-healing actions.
+    """
+    
+    def __init__(self, validation_data: Dict[str, Any]):
+        """
+        Initialize with validation result data
+        
+        Args:
+            validation_data: Dictionary containing validation results
+        """
+        self.validation_id = validation_data.get("validation_id")
+        self.execution_timestamp = validation_data.get("execution_timestamp")
+        self.dataset_name = validation_data.get("dataset_name")
+        self.table_name = validation_data.get("table_name")
+        self.execution_time = validation_data.get("execution_time")
+        self.summary = validation_data.get("summary", {})
+        self.results = validation_data.get("results", [])
+        self.self_healing_summary = validation_data.get("self_healing_summary", {})
+        self.metadata = validation_data.get("metadata", {})
+        
+        # Parse timestamp
+        try:
+            self.execution_dt = datetime.datetime.fromisoformat(
+                self.execution_timestamp.replace('Z', '+00:00')
+            )
+        except (ValueError, AttributeError):
+            logger.warning(f"Unable to parse timestamp: {self.execution_timestamp}")
+            self.execution_dt = datetime.datetime.now()
+        
+        # Initialize Google Cloud clients
+        self.bq_client = bigquery.Client()
+        self.storage_client = storage.Client()
+        
+        # Initialize pipeline components
+        self.metrics_publisher = MetricsPublisher()
+        self.alert_manager = AlertManager()
+        self.self_healing_engine = SelfHealingAIEngine()
+        self.model_registry = ModelRegistry()
+        self.expectation_manager = ExpectationSuiteManager()
+        self.metadata_store = ValidationMetadataStore()
+        
+        # Notification channels
+        self.teams_notifier = TeamsNotifier()
+        self.email_notifier = EmailNotifier()
+        
+        # Track the processing pipeline
+        self.processing_start_time = datetime.datetime.now()
+        
+        # Process the validation results
+        self._process_results()
+    
+    def _process_results(self):
+        """Process validation results and identify issues"""
+        self.passed_rules = []
+        self.failed_rules = []
+        self.warning_rules = []
+        self.issues = []
+        
+        for rule_result in self.results:
+            status = rule_result.get("status", "UNKNOWN")
+            
+            if status == "PASSED":
+                self.passed_rules.append(rule_result)
+            elif status == "FAILED":
+                self.failed_rules.append(rule_result)
+                
+                # Create an issue for failed rules
+                self.issues.append(ValidationIssue(
+                    rule_id=rule_result.get("rule_id"),
+                    rule_name=rule_result.get("rule_name"),
+                    rule_type=rule_result.get("rule_type"),
+                    dimension=rule_result.get("dimension"),
+                    status=status,
+                    details=rule_result.get("details", {}),
+                    recommendation=rule_result.get("self_healing_recommendation")
+                ))
+            elif status == "WARNING":
+                self.warning_rules.append(rule_result)
+                
+                # Create an issue for warning rules
+                self.issues.append(ValidationIssue(
+                    rule_id=rule_result.get("rule_id"),
+                    rule_name=rule_result.get("rule_name"),
+                    rule_type=rule_result.get("rule_type"),
+                    dimension=rule_result.get("dimension"),
+                    status=status,
+                    details=rule_result.get("details", {}),
+                    recommendation=rule_result.get("self_healing_recommendation")
+                ))
+        
+        # Store validation metadata
+        self.metadata_store.store_validation_metadata({
+            "validation_id": self.validation_id,
+            "execution_timestamp": self.execution_timestamp,
+            "dataset_name": self.dataset_name,
+            "table_name": self.table_name,
+            "quality_score": self.quality_score(),
+            "passes_threshold": self.passes_threshold(),
+            "passed_rules": len(self.passed_rules),
+            "failed_rules": len(self.failed_rules),
+            "warning_rules": len(self.warning_rules),
+            "source_system": self.metadata.get("source_system"),
+            "pipeline_id": self.metadata.get("pipeline_id"),
+            "execution_id": self.metadata.get("execution_id"),
+            "environment": self.metadata.get("environment")
+        })
+        
+        # Log the results summary
+        logger.info(
+            f"Validation {self.validation_id} processed: "
+            f"{len(self.passed_rules)} passed, {len(self.failed_rules)} failed, "
+            f"{len(self.warning_rules)} warnings"
+        )
+    
+    def passes_threshold(self) -> bool:
+        """Check if the validation passes the overall quality threshold"""
+        return self.summary.get("passes_threshold", False)
+    
+    def quality_score(self) -> float:
+        """Get the overall quality score"""
+        return self.summary.get("quality_score", {}).get("overall_score", 0)
+    
+    def dimension_scores(self) -> Dict[str, float]:
+        """Get quality scores by dimension"""
+        return self.summary.get("quality_score", {}).get("dimension_scores", {})
+    
+    def get_fixable_issues(self) -> List[ValidationIssue]:
+        """Get list of issues that are fixable by the self-healing system"""
+        return [issue for issue in self.issues if issue.is_fixable]
+    
+    def get_manual_issues(self) -> List[ValidationIssue]:
+        """Get list of issues that require manual intervention"""
+        return [issue for issue in self.issues if not issue.is_fixable]
+    
+    def publish_metrics(self):
+        """Publish validation metrics to the monitoring system"""
+        # Publish overall validation metrics
+        self.metrics_publisher.publish_metric(
+            metric_name="validation.execution_time",
+            value=self.execution_time,
+            dimensions={
+                "dataset": self.dataset_name,
+                "table": self.table_name,
+                "validation_id": self.validation_id,
+                "environment": self.metadata.get("environment", "unknown")
+            }
+        )
+        
+        self.metrics_publisher.publish_metric(
+            metric_name="validation.quality_score",
+            value=self.quality_score(),
+            dimensions={
+                "dataset": self.dataset_name,
+                "table": self.table_name,
+                "validation_id": self.validation_id,
+                "environment": self.metadata.get("environment", "unknown")
+            }
+        )
+        
+        # Publish metrics by dimension
+        for dimension, score in self.dimension_scores().items():
+            self.metrics_publisher.publish_metric(
+                metric_name=f"validation.dimension.{dimension.lower()}_score",
+                value=score,
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id,
+                    "environment": self.metadata.get("environment", "unknown")
+                }
+            )
+        
+        # Publish metrics by dimension from the results summary
+        for dimension, stats in self.summary.get("results_by_dimension", {}).items():
+            self.metrics_publisher.publish_metric(
+                metric_name=f"validation.dimension.{dimension.lower()}_success_rate",
+                value=stats.get("success_rate", 0),
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id,
+                    "environment": self.metadata.get("environment", "unknown")
+                }
+            )
+            
+            # Also publish counts
+            self.metrics_publisher.publish_metric(
+                metric_name=f"validation.dimension.{dimension.lower()}_total_rules",
+                value=stats.get("total", 0),
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id
+                }
+            )
+            
+            self.metrics_publisher.publish_metric(
+                metric_name=f"validation.dimension.{dimension.lower()}_failed_rules",
+                value=stats.get("failed", 0),
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id
+                }
+            )
+        
+        # Publish rule type metrics
+        for rule_type, stats in self.summary.get("results_by_rule_type", {}).items():
+            self.metrics_publisher.publish_metric(
+                metric_name=f"validation.rule_type.{rule_type.lower()}_success_rate",
+                value=stats.get("success_rate", 0),
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id,
+                    "environment": self.metadata.get("environment", "unknown")
+                }
+            )
+        
+        # Publish overall success metrics
+        self.metrics_publisher.publish_metric(
+            metric_name="validation.success_rate",
+            value=self.summary.get("success_rate", 0),
+            dimensions={
+                "dataset": self.dataset_name,
+                "table": self.table_name,
+                "validation_id": self.validation_id,
+                "environment": self.metadata.get("environment", "unknown")
+            }
+        )
+        
+        logger.info(f"Published validation metrics for {self.validation_id}")
+    
+    def send_notifications(self):
+        """Send notifications based on validation results"""
+        # Only send notifications if there are issues
+        if not self.issues:
+            return
+        
+        # Create notification message
+        message = {
+            "title": f"Data Quality Validation Results: {self.dataset_name}.{self.table_name}",
+            "validation_id": self.validation_id,
+            "timestamp": self.execution_timestamp,
+            "quality_score": self.quality_score(),
+            "passes_threshold": self.passes_threshold(),
+            "issues_count": {
+                "failed": len(self.failed_rules),
+                "warning": len(self.warning_rules)
+            },
+            "fixable_issues": len(self.get_fixable_issues()),
+            "manual_issues": len(self.get_manual_issues()),
+            "source_system": self.metadata.get("source_system"),
+            "pipeline_id": self.metadata.get("pipeline_id"),
+            "environment": self.metadata.get("environment"),
+            "issues_summary": [
+                {
+                    "rule_id": issue.rule_id,
+                    "rule_name": issue.rule_name,
+                    "status": issue.status,
+                    "fixable": issue.is_fixable,
+                    "dimension": issue.dimension
+                }
+                for issue in self.issues
+            ]
+        }
+        
+        # Determine notification level based on issues
+        if not self.passes_threshold():
+            severity = "high"
+        elif len(self.failed_rules) > 0:
+            severity = "medium"
+        else:
+            severity = "low"
+        
+        # Send to Teams if enabled
+        if CONFIG.get("notifications", {}).get("teams", {}).get("enabled", False):
+            self.teams_notifier.send_notification(
+                message=message,
+                severity=severity
+            )
+        
+        # Send email for high severity only if enabled
+        if (
+            CONFIG.get("notifications", {}).get("email", {}).get("enabled", False) and
+            severity == CONFIG.get("notifications", {}).get("email", {}).get("min_severity", "high")
+        ):
+            self.email_notifier.send_notification(
+                message=message,
+                severity=severity
+            )
+        
+        logger.info(f"Sent notifications for validation {self.validation_id} with severity {severity}")
+    
+    def apply_self_healing(self) -> Tuple[int, int, List[str]]:
+        """
+        Apply self-healing to fixable issues
+        
+        Returns:
+            Tuple containing:
+            - Number of successful fixes
+            - Number of failed fixes
+            - List of error messages for failed fixes
+        """
+        fixable_issues = self.get_fixable_issues()
+        
+        if not fixable_issues:
+            logger.info(f"No fixable issues found for validation {self.validation_id}")
+            return 0, 0, []
+        
+        # Determine healing mode from settings
+        healing_mode = self.self_healing_summary.get("healing_mode", "MANUAL")
+        
+        if healing_mode == "MANUAL":
+            logger.info(f"Skipping self-healing as mode is set to MANUAL")
+            return 0, 0, ["Self-healing mode is set to MANUAL"]
+        
+        successful_fixes = 0
+        failed_fixes = 0
+        error_messages = []
+        
+        # Get appropriate models from model registry
+        correction_models = self.model_registry.get_models_for_dataset(
+            dataset_name=self.dataset_name,
+            table_name=self.table_name,
+            model_type="CORRECTION"
+        )
+        
+        if not correction_models:
+            logger.warning(
+                f"No correction models found for {self.dataset_name}.{self.table_name}. "
+                "Using default models."
+            )
+        
+        # Process each fixable issue
+        for issue in fixable_issues:
+            logger.info(
+                f"Applying self-healing for issue {issue.rule_id} ({issue.rule_name}) "
+                f"with confidence {issue.recommendation.get('confidence')}"
+            )
+            
+            try:
+                # Create correction action
+                correction = CorrectionAction(
+                    validation_id=self.validation_id,
+                    rule_id=issue.rule_id,
+                    action_type=issue.recommendation.get("action_type"),
+                    description=issue.recommendation.get("description", ""),
+                    confidence=issue.recommendation.get("confidence", 0),
+                    dataset_name=self.dataset_name,
+                    table_name=self.table_name,
+                    details=issue.details,
+                    metadata=self.metadata
+                )
+                
+                # Apply the correction using the self-healing engine
+                result = self.self_healing_engine.apply_correction(
+                    correction=correction,
+                    models=correction_models,
+                    healing_mode=healing_mode
+                )
+                
+                if result.success:
+                    successful_fixes += 1
+                    
+                    # Publish success metrics
+                    self.metrics_publisher.publish_metric(
+                        metric_name="self_healing.correction_success",
+                        value=1,
+                        dimensions={
+                            "dataset": self.dataset_name,
+                            "table": self.table_name,
+                            "rule_id": issue.rule_id,
+                            "action_type": issue.recommendation.get("action_type", "unknown"),
+                            "environment": self.metadata.get("environment", "unknown")
+                        }
+                    )
+                    
+                    # Store correction metadata for learning feedback
+                    self.metadata_store.store_correction_metadata({
+                        "validation_id": self.validation_id,
+                        "rule_id": issue.rule_id,
+                        "action_type": issue.recommendation.get("action_type"),
+                        "confidence": issue.recommendation.get("confidence", 0),
+                        "success": True,
+                        "execution_time": result.execution_time,
+                        "records_affected": result.records_affected,
+                        "timestamp": datetime.datetime.now().isoformat()
+                    })
+                    
+                    logger.info(f"Successfully applied correction for issue {issue.rule_id}")
+                else:
+                    failed_fixes += 1
+                    error_messages.append(
+                        f"Failed to fix {issue.rule_id} ({issue.rule_name}): {result.error_message}"
+                    )
+                    
+                    # Publish failure metrics
+                    self.metrics_publisher.publish_metric(
+                        metric_name="self_healing.correction_failure",
+                        value=1,
+                        dimensions={
+                            "dataset": self.dataset_name,
+                            "table": self.table_name,
+                            "rule_id": issue.rule_id,
+                            "action_type": issue.recommendation.get("action_type", "unknown"),
+                            "error_type": result.error_type,
+                            "environment": self.metadata.get("environment", "unknown")
+                        }
+                    )
+                    
+                    # Store correction metadata for learning feedback
+                    self.metadata_store.store_correction_metadata({
+                        "validation_id": self.validation_id,
+                        "rule_id": issue.rule_id,
+                        "action_type": issue.recommendation.get("action_type"),
+                        "confidence": issue.recommendation.get("confidence", 0),
+                        "success": False,
+                        "error_type": result.error_type,
+                        "error_message": result.error_message,
+                        "timestamp": datetime.datetime.now().isoformat()
+                    })
+                    
+                    logger.error(
+                        f"Failed to apply correction for issue {issue.rule_id}: {result.error_message}"
+                    )
+            
+            except Exception as e:
+                failed_fixes += 1
+                error_message = f"Exception applying correction for {issue.rule_id}: {str(e)}"
+                error_messages.append(error_message)
+                
+                # Publish exception metrics
+                self.metrics_publisher.publish_metric(
+                    metric_name="self_healing.correction_exception",
+                    value=1,
+                    dimensions={
+                        "dataset": self.dataset_name,
+                        "table": self.table_name,
+                        "rule_id": issue.rule_id,
+                        "action_type": issue.recommendation.get("action_type", "unknown"),
+                        "exception_type": type(e).__name__,
+                        "environment": self.metadata.get("environment", "unknown")
+                    }
+                )
+                
+                # Store correction exception for learning feedback
+                self.metadata_store.store_correction_metadata({
+                    "validation_id": self.validation_id,
+                    "rule_id": issue.rule_id,
+                    "action_type": issue.recommendation.get("action_type"),
+                    "confidence": issue.recommendation.get("confidence", 0),
+                    "success": False,
+                    "error_type": "EXCEPTION",
+                    "error_message": str(e),
+                    "exception_type": type(e).__name__,
+                    "timestamp": datetime.datetime.now().isoformat()
+                })
+                
+                logger.exception(error_message)
+        
+        # Publish overall healing metrics
+        total_issues = len(fixable_issues)
+        if total_issues > 0:
+            self.metrics_publisher.publish_metric(
+                metric_name="self_healing.attempts",
+                value=total_issues,
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id,
+                    "environment": self.metadata.get("environment", "unknown")
+                }
+            )
+            
+            self.metrics_publisher.publish_metric(
+                metric_name="self_healing.success_rate",
+                value=successful_fixes / total_issues,
+                dimensions={
+                    "dataset": self.dataset_name,
+                    "table": self.table_name,
+                    "validation_id": self.validation_id,
+                    "environment": self.metadata.get("environment", "unknown")
+                }
+            )
+        
+        return successful_fixes, failed_fixes, error_messages
+    
+    def trigger_alerts(self):
+        """Trigger alerts based on validation results if needed"""
+        # No alerts needed if validation passes threshold
+        if self.passes_threshold() and not self.failed_rules:
+            return
+        
+        # Get manual issues that require attention
+        manual_issues = self.get_manual_issues()
+        
+        if not manual_issues:
+            return
+        
+        # Create alert for manual issues
+        alert_details = {
+            "validation_id": self.validation_id,
+            "dataset_name": self.dataset_name,
+            "table_name": self.table_name,
+            "quality_score": self.quality_score(),
+            "execution_timestamp": self.execution_timestamp,
+            "source_system": self.metadata.get("source_system"),
+            "pipeline_id": self.metadata.get("pipeline_id"),
+            "environment": self.metadata.get("environment"),
+            "issues": [
+                {
+                    "rule_id": issue.rule_id,
+                    "rule_name": issue.rule_name,
+                    "status": issue.status,
+                    "dimension": issue.dimension,
+                    "details": issue.details
+                }
+                for issue in manual_issues
+            ]
+        }
+        
+        # Determine alert severity
+        if not self.passes_threshold():
+            severity = "high"
+        elif len(self.failed_rules) > 0:
+            severity = "medium" 
+        else:
+            severity = "low"
+        
+        # Create and send the alert
+        self.alert_manager.create_alert(
+            alert_type="DATA_QUALITY",
+            severity=severity,
+            resource_name=f"{self.dataset_name}.{self.table_name}",
+            summary=f"Data quality issues detected in {self.dataset_name}.{self.table_name}",
+            details=alert_details,
+            source_system=self.metadata.get("source_system"),
+            environment=self.metadata.get("environment"),
+            tags={
+                "validation_id": self.validation_id,
+                "pipeline_id": self.metadata.get("pipeline_id", "unknown"),
+                "dataset": self.dataset_name,
+                "table": self.table_name
+            }
+        )
+        
+        logger.info(
+            f"Created {severity} alert for validation {self.validation_id} "
+            f"with {len(manual_issues)} issues requiring attention"
+        )
+    
+    def trigger_revalidation(self) -> bool:
+        """
+        Trigger revalidation after applying fixes
+        
+        Returns:
+            Boolean indicating if revalidation was triggered
+        """
+        # Only trigger revalidation if we have applied fixes
+        fixed_issues = self.get_fixable_issues()
+        if not fixed_issues:
+            return False
+        
+        try:
+            # Get the expectation suite for this dataset
+            suite_name = f"{self.dataset_name}.{self.table_name}"
+            suite = self.expectation_manager.get_expectation_suite(suite_name)
+            
+            if not suite:
+                logger.warning(
+                    f"Cannot trigger revalidation - expectation suite not found for {suite_name}"
+                )
+                return False
+            
+            # Create a revalidation request
+            revalidation_id = f"revalidation-{self.validation_id}"
+            revalidation_request = {
+                "validation_id": revalidation_id,
+                "original_validation_id": self.validation_id,
+                "dataset_name": self.dataset_name,
+                "table_name": self.table_name,
+                "expectation_suite_name": suite_name,
+                "trigger_type": "SELF_HEALING",
+                "priority": "HIGH",
+                "metadata": self.metadata
+            }
+            
+            # Submit the revalidation request
+            self.expectation_manager.submit_validation_request(revalidation_request)
+            
+            logger.info(
+                f"Triggered revalidation {revalidation_id} for {self.dataset_name}.{self.table_name} "
+                f"after applying fixes for validation {self.validation_id}"
+            )
+            return True
+            
+        except Exception as e:
+            logger.exception(f"Failed to trigger revalidation: {str(e)}")
+            return False
+    
+    def store_processing_metrics(self):
+        """Store metrics about the validation result processing itself"""
+        # Calculate processing time
+        processing_end_time = datetime.datetime.now()
+        processing_time = (processing_end_time - self.processing_start_time).total_seconds()
+        
+        # Publish processing metrics
+        self.metrics_publisher.publish_metric(
+            metric_name="validation_processor.processing_time",
+            value=processing_time,
+            dimensions={
+                "dataset": self.dataset_name,
+                "table": self.table_name,
+                "validation_id": self.validation_id,
+                "environment": self.metadata.get("environment", "unknown")
+            }
+        )
+        
+        # Store in BigQuery for historical analysis
+        processing_metrics = {
+            "validation_id": self.validation_id,
+            "processing_timestamp": processing_end_time.isoformat(),
+            "processing_time_seconds": processing_time,
+            "dataset_name": self.dataset_name,
+            "table_name": self.table_name,
+            "quality_score": self.quality_score(),
+            "total_rules": len(self.results),
+            "passed_rules": len(self.passed_rules),
+            "failed_rules": len(self.failed_rules),
+            "warning_rules": len(self.warning_rules),
+            "fixable_issues": len(self.get_fixable_issues()),
+            "manual_issues": len(self.get_manual_issues()),
+            "source_system": self.metadata.get("source_system"),
+            "pipeline_id": self.metadata.get("pipeline_id"),
+            "environment": self.metadata.get("environment")
+        }
+        
+        self.metadata_store.store_processing_metrics(processing_metrics)
+    
+    def process_and_respond(self) -> Dict[str, Any]:
+        """
+        Process validation results, apply self-healing, and generate response
+        
+        Returns:
+            Dictionary with processing results
+        """
+        # Publish metrics for monitoring
+        self.publish_metrics()
+        
+        # Apply self-healing for fixable issues
+        successful_fixes, failed_fixes, error_messages = self.apply_self_healing()
+        
+        # Trigger revalidation if fixes were applied
+        revalidation_triggered = False
+        if successful_fixes > 0:
+            revalidation_triggered = self.trigger_revalidation()
+        
+        # Send notifications
+        self.send_notifications()
+        
+        # Trigger alerts for issues requiring manual attention
+        self.trigger_alerts()
+        
+        # Store processing metrics
+        self.store_processing_metrics()
+        
+        # Generate response
+        response = {
+            "validation_id": self.validation_id,
+            "processed_at": datetime.datetime.now().isoformat(),
+            "dataset_name": self.dataset_name,
+            "table_name": self.table_name,
+            "quality_score": self.quality_score(),
+            "passes_threshold": self.passes_threshold(),
+            "total_issues": len(self.issues),
+            "fixable_issues": len(self.get_fixable_issues()),
+            "manual_issues": len(self.get_manual_issues()),
+            "self_healing_results": {
+                "successful_fixes": successful_fixes,
+                "failed_fixes": failed_fixes,
+                "error_messages": error_messages,
+                "revalidation_triggered": revalidation_triggered
+            },
+            "notifications_sent": True,
+            "alerts_triggered": not self.passes_threshold() or len(self.failed_rules) > 0,
+            "source_system": self.metadata.get("source_system"),
+            "pipeline_id": self.metadata.get("pipeline_id"),
+            "environment": self.metadata.get("environment")
+        }
+        
+        logger.info(
+            f"Completed processing for validation {self.validation_id}: "
+            f"Quality score {self.quality_score()}, {successful_fixes} successful fixes, "
+            f"{failed_fixes} failed fixes, {len(self.get_manual_issues())} manual issues"
+        )
+        
+        return response
+
+
+def process_validation_result(validation_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Process a validation result JSON and apply self-healing
+    
+    Args:
+        validation_data: Dictionary containing validation results
+        
+    Returns:
+        Dictionary with processing results
+    """
+    validation_id = validation_data.get("validation_id", "unknown")
+    
+    try:
+        # Initialize validation result
+        validation_result = ValidationResult(validation_data)
+        
+        # Process validation result and get response
+        return validation_result.process_and_respond()
+    
+    except Exception as e:
+        logger.exception(f"Error processing validation result {validation_id}: {str(e)}")
+        
+        # Publish error metric
+        try:
+            metrics_publisher = MetricsPublisher()
+            metrics_publisher.publish_metric(
+                metric_name="validation_processor.processing_error",
+                value=1,
+                dimensions={
+                    "dataset": validation_data.get("dataset_name", "unknown"),
+                    "table": validation_data.get("table_name", "unknown"),
+                    "validation_id": validation_id,
+                    "error_type": type(e).__name__,
+                    "environment": validation_data.get("metadata", {}).get("environment", "unknown")
+                }
+            )
+        except Exception as metrics_error:
+            logger.error(f"Failed to publish error metric: {str(metrics_error)}")
+        
+        # Return error response
+        return {
+            "error": True,
+            "error_message": str(e),
+            "error_type": type(e).__name__,
+            "validation_id": validation_id,
+            "processed_at": datetime.datetime.now().isoformat()
+        }
+
+
+# Module configuration
+CONFIG = {
+    "self_healing": {
+        "confidence_threshold": 0.85,
+        "default_healing_mode": "SEMI_AUTOMATIC",
+        "max_retry_attempts": 3,
+        "correction_timeout": 300  # seconds
+    },
+    "notifications": {
+        "teams": {
+            "enabled": True,
+            "channel": "data-quality-alerts"
+        },
+        "email": {
+            "enabled": True,
+            "min_severity": "high",
+            "recipients": ["data-ops@example.com"]
+        }
+    },
+    "metrics": {
+        "enabled": True,
+        "namespace": "data_pipeline"
+    },
+    "monitoring": {
+        "detailed_metrics": True,
+        "metric_collection_interval": 60  # seconds
+    },
+    "validation": {
+        "revalidation_enabled": True,
+        "revalidation_timeout": 600  # seconds
+    }
+}
+
+
+def main(event, context):
+    """
+    Cloud Function entry point for processing validation results
+    
+    Args:
+        event: Cloud event containing validation result or GCS file reference
+        context: Cloud function context
+    
+    Returns:
+        Processing result dictionary
+    """
+    try:
+        logger.info(f"Received validation result processing request: {event}")
+        
+        # Determine if this is a direct payload or a GCS file reference
+        if "bucket" in event and "name" in event:
+            # This is a GCS file reference
+            bucket_name = event["bucket"]
+            file_name = event["name"]
+            
+            logger.info(f"Loading validation result from GCS: gs://{bucket_name}/{file_name}")
+            
+            # Initialize storage client
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket(bucket_name)
+            blob = bucket.blob(file_name)
+            
+            # Download and parse JSON
+            json_content = blob.download_as_text()
+            validation_data = json.loads(json_content)
+        else:
+            # Direct payload
+            validation_data = event
+        
+        # Process validation result
+        result = process_validation_result(validation_data)
+        return result
+    
+    except Exception as e:
+        logger.exception(f"Error in validation result processor: {str(e)}")
+        return {"error": True, "error_message": str(e), "error_type": type(e).__name__}
+
+
+if __name__ == "__main__":
+    """
+    Local execution entry point for testing
+    """
+    import sys
+    
+    if len(sys.argv) > 1:
+        # Read validation result from file
+        file_path = sys.argv[1]
+        with open(file_path, 'r') as f:
+            validation_data = json.load(f)
+        
+        # Process validation result
+        result = process_validation_result(validation_data)
+        print(json.dumps(result, indent=2))
+    else:
+        print("Usage: python validation_processor.py <validation_result_file.json>")
+        sys.exit(1)
